@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # chat_application
 
 Anonymous Chat Application for Opposite Genders
@@ -14,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# Anonymous_Chat_Application
+>>>>>>> 3e9f97de6074be914a7a939a76368a6c72c3b8b8
