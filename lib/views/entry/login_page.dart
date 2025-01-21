@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../home/home_page_frame.dart';
+// import '../home/home_page_frame.dart';
 import '../../core/app_theme.dart';
 import 'register_page.dart';
+// import '../test_1.dart';
+import 'About_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -222,7 +224,7 @@ class _LoginPageState extends State<LoginPage> {
   void _navigateToHome(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => HomePageFrame()),
+      MaterialPageRoute(builder: (context) => About()),
     );
   }
 
