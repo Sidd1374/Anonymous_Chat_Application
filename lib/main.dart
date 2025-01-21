@@ -1,34 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Import provider package
-import 'app_theme.dart';
-import 'LoginPage.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'core/app_theme.dart';
+import 'views/entry/login_page.dart';
+
 
 void main() {
   runApp(MyApp());
 }
 
-class ThemeChanger extends ChangeNotifier {
-  ThemeData _currentTheme = AppTheme.darkPurpleTheme;
-
-  ThemeData get currentTheme => _currentTheme;
-
-  void setTheme(ThemeData theme) {
-    _currentTheme = theme;
-    notifyListeners();
-  }
-}
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => ThemeChanger(),
-      child: Consumer<ThemeChanger>(
-        builder: (context, themeChanger, _) {
-          return MaterialApp(
-            title: 'ChatApp',
-            theme: themeChanger.currentTheme,
-            home: LoginPage(),
+      create: (_) => AppTheme(),
+      child: Consumer<AppTheme>(
+        builder: (context, appTheme, _) {
+          return ScreenUtilInit(
+            designSize: const Size(360, 800),
+            minTextAdapt: true,
+            splitScreenMode: true,
+            builder: (context, child) {
+              return MaterialApp(
+                debugShowCheckedModeBanner: false,
+                title: 'ChatApp',
+                theme: appTheme.currentTheme,
+                home: const LoginPage(),
+              );
+            },
           );
         },
       ),

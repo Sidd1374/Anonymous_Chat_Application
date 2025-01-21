@@ -1,0 +1,39 @@
+
+lib/
+├── main.dart                 // Entry point of the app
+├── core/                     // Core functionalities like themes, utilities, and constants
+│   ├── theme.dart            // App themes (e.g., light and dark)
+│   ├── constants.dart        // Constants (e.g., strings, colors, etc.)
+│   ├── utilities.dart        // Helper functions and utilities
+├── models/                   // Data models (e.g., user, chat, etc.)
+│   ├── user_model.dart
+│   ├── chat_model.dart
+├── services/                 // Backend services or APIs
+│   ├── auth_service.dart     // Authentication services (login, register)
+│   ├── chat_service.dart     // Chat-related APIs
+│   ├── user_service.dart     // User-related APIs
+├── providers/                // State management providers (e.g., ChangeNotifier, Bloc)
+│   ├── auth_provider.dart    // Authentication state management
+│   ├── chat_provider.dart    // Chat-related state management
+│   ├── user_provider.dart    // User-related state management
+├── views/                    // UI pages
+│   ├── entry/                // Entry-related pages
+│   │   ├── welcome_page.dart
+│   │   ├── login_page.dart
+│   │   ├── register_page.dart
+│   │   ├── otp_page.dart
+│   ├── home/                 // Home and related pages
+│   │   ├── home_page.dart
+│   │   ├── friends_page.dart
+│   │   ├── history_page.dart
+│   ├── profile/              // Profile-related pages
+│   │   ├── profile_page.dart
+│   ├── chat/                 // Chat-related pages
+│   │   ├── chat_box_page.dart
+│   │   ├── chat_page.dart
+├── widgets/                  // Reusable UI components
+│   ├── custom_button.dart    // Custom button widget
+│   ├── custom_textfield.dart // Custom text field widget
+│   ├── chat_bubble.dart      // Chat bubble widget
+├── routes/                   // App routing
+│   ├── app_routes.dart       // Define routes for all pages
