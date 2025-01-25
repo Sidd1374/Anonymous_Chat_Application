@@ -12,7 +12,7 @@ class AppTheme extends ChangeNotifier {
   static const Color darkSelectedIconColor = Colors.white;
   static const Color darkUnselectedIconColor = Color(0xFFDDDDDD);
   static const Color lightSelectedIconColor = Colors.black;
-  static const Color lightUnselectedIconColor = Colors.grey;
+  static const Color lightUnselectedIconColor = lightSecondaryColor;
 
 
   // Dark Theme
@@ -144,9 +144,9 @@ class AppTheme extends ChangeNotifier {
       selectedItemColor: lightSelectedIconColor,
       unselectedItemColor: lightUnselectedIconColor,
       selectedIconTheme: const IconThemeData(color: lightSelectedIconColor),
-      unselectedIconTheme: const IconThemeData(color: lightUnselectedIconColor),
+      unselectedIconTheme: IconThemeData(color: lightUnselectedIconColor),
       selectedLabelStyle: const TextStyle(color: lightSelectedIconColor),
-      unselectedLabelStyle: const TextStyle(color: lightUnselectedIconColor),
+      unselectedLabelStyle: TextStyle(color: lightUnselectedIconColor),
       elevation: 8.0,
       type: BottomNavigationBarType.fixed,
     ),

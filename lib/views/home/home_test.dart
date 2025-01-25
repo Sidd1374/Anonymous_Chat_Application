@@ -3,10 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 import 'home_page.dart';
-import '../entry/login_page.dart';
+// import '../entry/login_page.dart';
 import 'friends_page.dart';
 import 'history_page.dart';
-// import '../../views/test_1.dart';
+import '../../views/test_1.dart';
+
 
 class HomePageFrame extends StatefulWidget {
   const HomePageFrame({super.key});
@@ -51,7 +52,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  "VEIL",
+                  "Test Environment",
                   style: Theme.of(context).appBarTheme.titleTextStyle,
                 ),
               ],
@@ -60,7 +61,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  MaterialPageRoute(builder: (context) => ExampleScreen()),
                 );
               },
               icon: const Icon(Icons.account_circle_outlined),
@@ -119,14 +120,19 @@ class _HomePageFrameState extends State<HomePageFrame> {
                   borderRadius: BorderRadius.circular(18.r),
                 ),
                 child: Center(
-                  child: Icon(
-                    _selectedIndex == 0
-                        ? Icons.home
-                        : _selectedIndex == 1
-                        ? Icons.people
-                        : Icons.history,
-                    color: Theme.of(context).bottomNavigationBarTheme.selectedIconTheme?.color,
-                  ),
+                  child: Text(_selectedIndex == 0
+                          ? "home"
+                          : _selectedIndex == 1
+                          ? "friends"
+                          : "history",),
+                  // child: Icon(
+                  //   _selectedIndex == 0
+                  //       ? Icons.home
+                  //       : _selectedIndex == 1
+                  //       ? Icons.people
+                  //       : Icons.history,
+                  //   color: Theme.of(context).bottomNavigationBarTheme.selectedIconTheme?.color,
+                  // ),
                 ),
               ),
             ),

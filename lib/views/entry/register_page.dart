@@ -15,6 +15,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+  bool _isChecked = false;
 
   @override
   Widget build(BuildContext context) {
@@ -152,19 +153,65 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                 ),
-                SizedBox(height: 30.h),
+                Container(
+                  alignment: Alignment.bottomLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Checkbox(
+                        value: _isChecked,
+                        onChanged: (bool? newValue) {
+                          setState(() {
+                            _isChecked = newValue!;
+                          });
+                        },
+                        activeColor: Theme.of(context).primaryColor,
+                        checkColor: Colors.white,
+                        tristate: false,
+                        materialTapTargetSize: MaterialTapTargetSize.padded,
+                        visualDensity: VisualDensity.adaptivePlatformDensity,
+                        autofocus: false,
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Agree to Our ",
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              print('Terms & Conditions tapped');
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              "Terms & Conditions",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 10.h),
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
                       print('Account created successfully');
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(200.w, 50.h),
-                  ),
+                  style: AppTheme.elevatedButtonStyle(context),
                   child: const Text("Sign Up"),
                 ),
-                SizedBox(height: 40.h),
+                SizedBox(height: 30.h),
                 Row(
                   children: [
                     Expanded(
@@ -182,7 +229,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                 ),
-                SizedBox(height: 30.h),
+                SizedBox(height: 25.h),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -208,6 +255,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ],
                 ),
+                SizedBox(height: 25.h),
               ],
             ),
           ),

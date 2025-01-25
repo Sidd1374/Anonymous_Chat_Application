@@ -7,7 +7,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        "Home Page Content",
+        "Home Page helo Content",
         style: Theme.of(context).textTheme.bodyLarge,
       ),
     );
