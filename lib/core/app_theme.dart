@@ -3,53 +3,55 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AppTheme extends ChangeNotifier {
   // Global constants for colors
-  static const Color _primaryColor = Color(0xFFFF964B);
-  static const Color _darkBackgroundColor = Color(0xFF282725);
-  static const Color _lightBackgroundColor = Color(0xFFF1E5DD);
-  static const Color _darkSecondaryColor = Color(0xFF433F3C);
-  static const Color _lightSecondaryColor = Color(0xFFFFF3EA);
+  static const Color primaryColor = Color(0xFFFF964B);
+  static const Color darkBackgroundColor = Color(0xFF282725);
+  static const Color lightBackgroundColor = Color(0xFFF1E5DD);
+  static const Color darkSecondaryColor = Color(0xFF433F3C);
+  static const Color lightSecondaryColor = Color(0xFFFFF3EA);
 
-  // Logo paths for themes
-  static const String _lightLogoPath = 'assets/logo/icon-no-bg-white.png';
-  static const String _darkLogoPath = 'assets/logo/icon-black-no-bg.png';
+  static const Color darkSelectedIconColor = Colors.white;
+  static const Color darkUnselectedIconColor = Color(0xFFDDDDDD);
+  static const Color lightSelectedIconColor = Colors.black;
+  static const Color lightUnselectedIconColor = Colors.grey;
+
 
   // Dark Theme
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: _darkBackgroundColor,
-    primaryColor: _primaryColor,
+    scaffoldBackgroundColor: darkBackgroundColor,
+    primaryColor: primaryColor,
     colorScheme: const ColorScheme.dark(
-      secondary: _darkSecondaryColor,
+      secondary: darkSecondaryColor,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: _darkBackgroundColor,
+      backgroundColor: darkBackgroundColor,
       iconTheme: IconThemeData(color: Colors.white),
       titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: _darkSecondaryColor,
+      fillColor: darkSecondaryColor,
       border: const OutlineInputBorder(
-        borderSide: BorderSide(color: _primaryColor),
+        borderSide: BorderSide(color: primaryColor),
       ),
       enabledBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: _primaryColor),
+        borderSide: BorderSide(color: primaryColor),
       ),
       focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: _primaryColor),
+        borderSide: BorderSide(color: primaryColor),
       ),
       labelStyle: const TextStyle(color: Colors.white),
       hintStyle: const TextStyle(color: Colors.white70),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: _primaryColor,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: _primaryColor,
+      backgroundColor: primaryColor,
       foregroundColor: Colors.white,
     ),
     textTheme: const TextTheme(
@@ -58,53 +60,68 @@ class AppTheme extends ChangeNotifier {
       titleLarge: TextStyle(color: Colors.white, fontSize: 20),
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: _primaryColor,
+      backgroundColor: primaryColor,
       contentTextStyle: TextStyle(color: Colors.white),
     ),
     dialogTheme: const DialogTheme(
-      backgroundColor: _darkBackgroundColor,
+      backgroundColor: darkBackgroundColor,
       titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
       contentTextStyle: TextStyle(color: Colors.white70),
     ),
+    // bottomNavigationBarTheme: bottomNavigationBarThemeDark,
+
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: darkSecondaryColor,
+      selectedItemColor: darkSelectedIconColor,
+      unselectedItemColor: darkUnselectedIconColor,
+      selectedIconTheme: const IconThemeData(color: darkSelectedIconColor),
+      unselectedIconTheme: const IconThemeData(color: darkUnselectedIconColor),
+      selectedLabelStyle: TextStyle(color: darkSelectedIconColor),
+      unselectedLabelStyle: const TextStyle(color: darkUnselectedIconColor),
+
+      elevation: 8.0,
+      type: BottomNavigationBarType.fixed,
+    ),
+
   );
 
   // Light Theme
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
-    scaffoldBackgroundColor: _lightBackgroundColor,
-    primaryColor: _primaryColor,
+    scaffoldBackgroundColor: lightBackgroundColor,
+    primaryColor: primaryColor,
     colorScheme: const ColorScheme.light(
-      secondary: _lightSecondaryColor,
+      secondary: lightSecondaryColor,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: _lightBackgroundColor,
+      backgroundColor: lightBackgroundColor,
       iconTheme: IconThemeData(color: Colors.black),
       titleTextStyle: TextStyle(color: Colors.black, fontSize: 20),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: _lightSecondaryColor,
+      fillColor: lightSecondaryColor,
       border: const OutlineInputBorder(
-        borderSide: BorderSide(color: _primaryColor),
+        borderSide: BorderSide(color: primaryColor),
       ),
       enabledBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: _primaryColor),
+        borderSide: BorderSide(color: primaryColor),
       ),
       focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: _primaryColor),
+        borderSide: BorderSide(color: primaryColor),
       ),
       labelStyle: const TextStyle(color: Colors.black),
       hintStyle: const TextStyle(color: Colors.black54),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: _primaryColor,
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: _primaryColor,
+      backgroundColor: primaryColor,
       foregroundColor: Colors.white,
     ),
     textTheme: const TextTheme(
@@ -113,18 +130,28 @@ class AppTheme extends ChangeNotifier {
       titleLarge: TextStyle(color: Colors.black, fontSize: 20),
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: _primaryColor,
+      backgroundColor: primaryColor,
       contentTextStyle: TextStyle(color: Colors.black),
     ),
     dialogTheme: const DialogTheme(
-      backgroundColor: _lightBackgroundColor,
+      backgroundColor: lightBackgroundColor,
       titleTextStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
       contentTextStyle: TextStyle(color: Colors.black87),
     ),
+
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: primaryColor,
+      selectedItemColor: lightSelectedIconColor,
+      unselectedItemColor: lightUnselectedIconColor,
+      selectedIconTheme: const IconThemeData(color: lightSelectedIconColor),
+      unselectedIconTheme: const IconThemeData(color: lightUnselectedIconColor),
+      selectedLabelStyle: const TextStyle(color: lightSelectedIconColor),
+      unselectedLabelStyle: const TextStyle(color: lightUnselectedIconColor),
+      elevation: 8.0,
+      type: BottomNavigationBarType.fixed,
+    ),
+
   );
-
-
-
 
   static ButtonStyle elevatedButtonStyle(BuildContext context) {
     return ElevatedButton.styleFrom(
@@ -159,13 +186,11 @@ class AppTheme extends ChangeNotifier {
     );
   }
 
-
-
-
-
   // Theme and logo management
   ThemeData _currentTheme = darkTheme;
-  String _currentLogoPath = _lightLogoPath;
+  String _currentLogoPath = 'assets/logo/icon-no-bg-white.png';
+  Color containerColor = primaryColor;
+
 
   ThemeData get currentTheme => _currentTheme;
   String get currentLogoPath => _currentLogoPath;
@@ -174,13 +199,13 @@ class AppTheme extends ChangeNotifier {
   void toggleTheme() {
     if (_currentTheme == lightTheme) {
       _currentTheme = darkTheme;
-      _currentLogoPath = _lightLogoPath;
+      _currentLogoPath = 'assets/logo/icon-no-bg-white.png';
+      containerColor = primaryColor;
     } else {
       _currentTheme = lightTheme;
-      _currentLogoPath = _darkLogoPath;
+      _currentLogoPath = 'assets/logo/icon-black-no-bg.png';
+      containerColor = lightSecondaryColor;
     }
     notifyListeners();
   }
-
 }
-
