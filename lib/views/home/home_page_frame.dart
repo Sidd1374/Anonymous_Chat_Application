@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
+
 import 'home_page.dart';
 import '../entry/login_page.dart';
 import 'friends_page.dart';
@@ -17,7 +18,6 @@ class HomePageFrame extends StatefulWidget {
 
 class _HomePageFrameState extends State<HomePageFrame> {
   int _selectedIndex = 0;
-
 
   static final List<Widget> _widgetOptions = <Widget>[
     HomePage(),
@@ -71,7 +71,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 8.0,right: 8.0,bottom: 4.0),
+        padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 4.0),
         child: Stack(
           alignment: Alignment.bottomCenter,
           children: [
@@ -93,15 +93,26 @@ class _HomePageFrameState extends State<HomePageFrame> {
                   ),
                 ],
                 currentIndex: _selectedIndex,
-                selectedItemColor: Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
-                unselectedItemColor: Theme.of(context).bottomNavigationBarTheme.unselectedItemColor,
-                selectedLabelStyle: TextStyle(color: Theme.of(context).bottomNavigationBarTheme.selectedItemColor),
-                unselectedLabelStyle: TextStyle(color: Theme.of(context).bottomNavigationBarTheme.unselectedItemColor),
+                selectedItemColor: Theme.of(context)
+                    .bottomNavigationBarTheme
+                    .selectedItemColor,
+                unselectedItemColor: Theme.of(context)
+                    .bottomNavigationBarTheme
+                    .unselectedItemColor,
+                selectedLabelStyle: TextStyle(
+                    color: Theme.of(context)
+                        .bottomNavigationBarTheme
+                        .selectedItemColor),
+                unselectedLabelStyle: TextStyle(
+                    color: Theme.of(context)
+                        .bottomNavigationBarTheme
+                        .unselectedItemColor),
                 showUnselectedLabels: false,
                 showSelectedLabels: false,
                 onTap: _onItemTapped,
                 type: BottomNavigationBarType.fixed,
-                backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+                backgroundColor:
+                    Theme.of(context).bottomNavigationBarTheme.backgroundColor,
               ),
             ),
             AnimatedPositioned(
@@ -123,9 +134,12 @@ class _HomePageFrameState extends State<HomePageFrame> {
                     _selectedIndex == 0
                         ? Icons.home
                         : _selectedIndex == 1
-                        ? Icons.people
-                        : Icons.history,
-                    color: Theme.of(context).bottomNavigationBarTheme.selectedIconTheme?.color,
+                            ? Icons.people
+                            : Icons.history,
+                    color: Theme.of(context)
+                        .bottomNavigationBarTheme
+                        .selectedIconTheme
+                        ?.color,
                   ),
                 ),
               ),

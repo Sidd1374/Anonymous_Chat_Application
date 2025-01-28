@@ -1,8 +1,33 @@
+import 'package:VEIL_Chat_Application/views/entry/about_card_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-// import '../home/home_page_frame.dart';
-import '../home/home_test.dart';
-class About extends StatelessWidget {
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
+// import '../home/home_test.dart';
+
+class About extends StatefulWidget {
+  @override
+  State<About> createState() => _AboutState();
+}
+
+class _AboutState extends State<About> {
+  File? _profileImage;
+  final TextEditingController _nameController = TextEditingController();
+  String _selectedGender = 'Select a gender';
+  final TextEditingController _ageController = TextEditingController();
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -26,10 +51,7 @@ class About extends StatelessWidget {
             children: [
               SizedBox(height: 20.h),
               GestureDetector(
-                onTap: () {
-                  // Add functionality to upload a profile picture
-                  print("Profile image tapped");
-                },
+                onTap: _pickImage,
                 child: Stack(
                   alignment: Alignment.bottomRight,
                   children: [
@@ -45,17 +67,25 @@ class About extends StatelessWidget {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black,
                             blurRadius: 7.r,
                             offset: Offset(0, 6.h),
                           ),
                         ],
+                        image: _profileImage != null
+                            ? DecorationImage(
+                                image: FileImage(_profileImage!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
-                      child: Icon(
-                        Icons.person,
-                        size: 80.sp,
-                        color: theme.hintColor,
-                      ),
+                      child: _profileImage == null
+                          ? Icon(
+                              Icons.person,
+                              size: 80.sp,
+                              color: theme.hintColor,
+                            )
+                          : null,
                     ),
                     CircleAvatar(
                       radius: 20.r,
@@ -74,7 +104,8 @@ class About extends StatelessWidget {
               SizedBox(height: 20.h),
               SizedBox(
                 height: 60.h,
-                child: _buildInputField(context, 'Full Name'),
+                child: _buildInputField(context, 'Full Name',
+                    controller: _nameController),
               ),
               SizedBox(height: 8.h),
               SizedBox(
@@ -84,7 +115,8 @@ class About extends StatelessWidget {
               SizedBox(height: 8.h),
               SizedBox(
                 height: 60.h,
-                child: _buildInputField(context, 'Current Age', numeric: true),
+                child: _buildInputField(context, 'Current Age',
+                    numeric: true, controller: _ageController),
               ),
               SizedBox(height: 20.h),
               Text.rich(
@@ -102,7 +134,7 @@ class About extends StatelessWidget {
                     ),
                     TextSpan(
                       text:
-                      ' Verification \nThis means we are going solely with your word here',
+                          ' Verification \nThis means we are going solely with your word here',
                       style: theme.textTheme.bodyMedium,
                     ),
                   ],
@@ -119,21 +151,22 @@ class About extends StatelessWidget {
   }
 
   Widget _buildInputField(BuildContext context, String placeholder,
-      {bool numeric = false}) {
+      {bool numeric = false, TextEditingController? controller}) {
     final theme = Theme.of(context);
 
     return TextField(
+      controller: controller,
       keyboardType: numeric ? TextInputType.number : TextInputType.text,
       decoration: InputDecoration(
         hintText: placeholder,
         filled: true,
         fillColor: theme.cardColor,
-        border: InputBorder.none, // Removed border
+        border: InputBorder.none,
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
       ),
       style: theme.textTheme.bodyLarge?.copyWith(
-        color: theme.textTheme.bodyLarge?.color, // Text color as per theme
+        color: theme.textTheme.bodyLarge?.color,
       ),
     );
   }
@@ -141,10 +174,11 @@ class About extends StatelessWidget {
   Widget _buildDropdownField(BuildContext context, String placeholder) {
     final theme = Theme.of(context);
     return DropdownButtonFormField<String>(
+      // value: _selectedGender,
       decoration: InputDecoration(
         filled: true,
         fillColor: theme.cardColor,
-        border: InputBorder.none, // Removed border
+        border: InputBorder.none,
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         hintText: placeholder,
         hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
@@ -152,16 +186,18 @@ class About extends StatelessWidget {
       items: ['Male', 'Female', 'Other']
           .map(
             (gender) => DropdownMenuItem(
-          value: gender,
-          child: Text(
-            gender,
-            style: theme.textTheme.bodyLarge,
-          ),
-        ),
-      )
+              value: gender,
+              child: Text(
+                gender,
+                style: theme.textTheme.bodyLarge,
+              ),
+            ),
+          )
           .toList(),
       onChanged: (value) {
-        // Handle gender selection
+        setState(() {
+          _selectedGender = value!;
+        });
       },
     );
   }
@@ -171,8 +207,21 @@ class About extends StatelessWidget {
 
     return ElevatedButton(
       onPressed: () {
-        // Add functionality for the continue button
-        Navigator.push(context, MaterialPageRoute(builder: (Context) => HomePageFrame()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AboutCardScreen(
+              profileImage: _profileImage,
+              name: _nameController.text.isNotEmpty
+                  ? _nameController.text
+                  : 'John Doe',
+              gender: _selectedGender != 'Select a gender'
+                  ? _selectedGender
+                  : 'Male',
+              age: _ageController.text.isNotEmpty ? _ageController.text : '20',
+            ),
+          ),
+        );
       },
       style: ElevatedButton.styleFrom(
         minimumSize: Size(182.w, 50.h),
@@ -180,7 +229,7 @@ class About extends StatelessWidget {
           borderRadius: BorderRadius.circular(10.r),
         ),
         backgroundColor: theme.primaryColor,
-        shadowColor: theme.primaryColor.withOpacity(0.3),
+        shadowColor: theme.primaryColor,
         elevation: 5,
       ),
       child: Text(

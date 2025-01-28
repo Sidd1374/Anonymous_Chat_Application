@@ -9,9 +9,9 @@ class AppTheme extends ChangeNotifier {
   static const Color darkSecondaryColor = Color(0xFF433F3C);
   static const Color lightSecondaryColor = Color(0xFFFFF3EA);
 
-  static const Color darkSelectedIconColor = Colors.white;
+  static const Color darkSelectedIconColor = primaryColor;
   static const Color darkUnselectedIconColor = Color(0xFFDDDDDD);
-  static const Color lightSelectedIconColor = Colors.black;
+  static const Color lightSelectedIconColor = primaryColor;
   static const Color lightUnselectedIconColor = lightSecondaryColor;
 
 

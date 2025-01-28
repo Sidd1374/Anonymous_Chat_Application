@@ -1,3 +1,4 @@
+import 'package:VEIL_Chat_Application/views/home/home_page_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -61,9 +62,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 Text(
                   "Create Account",
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 28.sp,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 28.sp,
+                      ),
                 ),
                 SizedBox(height: 10.h),
                 Text(
@@ -140,7 +141,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         onPressed: () {
                           setState(() {
                             _isConfirmPasswordVisible =
-                            !_isConfirmPasswordVisible;
+                                !_isConfirmPasswordVisible;
                           });
                         },
                       ),
@@ -204,9 +205,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(height: 10.h),
                 ElevatedButton(
                   onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      print('Account created successfully');
-                    }
+                    showCodeInputDialog(context);
                   },
                   style: AppTheme.elevatedButtonStyle(context),
                   child: const Text("Sign Up"),
@@ -263,10 +262,74 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
+
   void _navigateToLogin(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => LoginPage()),
+    );
+  }
+
+  void showCodeInputDialog(BuildContext context) {
+    final TextEditingController codeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          title: const Text("Enter Code"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: codeController,
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  letterSpacing: 8.0, // Space for the 6 underscores
+                  fontSize: 20.0,
+                ),
+                decoration: const InputDecoration(
+                  hintText: "______",
+                  counterText: "", // Hides the counter text
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      // Add resend functionality here
+                      Navigator.of(context).pop(); // Close dialog for now
+                    },
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange),
+                    child: const Text("Resend"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Redirect to another page on submit
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                HomePageFrame()), // Replace SomeOtherPage with your target page
+                      );
+                    },
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    child: const Text("Submit"),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
