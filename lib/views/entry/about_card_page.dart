@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:io';
 
 import '../home/home_page_frame.dart';
+import 'level_two_verification_page.dart';
 
 class AboutCardScreen extends StatelessWidget {
   final File? profileImage;
@@ -11,12 +12,12 @@ class AboutCardScreen extends StatelessWidget {
   final String age;
 
   const AboutCardScreen({
-    Key? key,
+    super.key,
     required this.profileImage,
     required this.name,
     required this.gender,
     required this.age,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,13 +25,15 @@ class AboutCardScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          // title: const Text('About You'),
-          ),
+        // title: const Text('About You'),
+        automaticallyImplyLeading: false,
+      ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            // SizedBox(height: 80.h),
             _buildTitleSection(theme),
             SizedBox(height: 20.h),
             _buildProfileCard(theme),
@@ -209,6 +212,8 @@ class AboutCardScreen extends StatelessWidget {
         ElevatedButton(
           onPressed: () {
             // Handle verify action
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => LevelTwoPage()));
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.primaryColor,

@@ -37,3 +37,19 @@ lib/
 │   ├── chat_bubble.dart      // Chat bubble widget
 ├── routes/                   // App routing
 │   ├── app_routes.dart       // Define routes for all pages
+
+
+
+
+
+
+
+
+
+
+
+
+make this code more efficient and modular like make the Build function in a separate function and then call the function to built the widgets 
+make this code more efficient and make sure this uses the screenutil lib for responsive design make sure the design maintain the ratios as described in the code
+also make sure that the code follow the app theme and make sure the context and also make sure the app follows the size of the design that have already been set which is designSize: const Size(360, 800),
+make sure all wigdets are responsive to this design and do not over flow the page 

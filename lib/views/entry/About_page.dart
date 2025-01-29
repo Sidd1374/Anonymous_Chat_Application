@@ -67,7 +67,7 @@ class _AboutState extends State<About> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black,
+                            color: theme.primaryColor,
                             blurRadius: 7.r,
                             offset: Offset(0, 6.h),
                           ),
