@@ -293,7 +293,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 decoration: const InputDecoration(
                   hintText: "______",
-                  counterText: "", // Hides the counter text
+                  counterText: "hello",
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
@@ -305,7 +305,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ElevatedButton(
                     onPressed: () {
                       // Add resend functionality here
-                      Navigator.of(context).pop(); // Close dialog for now
+                      Navigator.of(context).pop();
                     },
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange),
@@ -313,11 +313,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      // Redirect to another page on submit
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                            builder: (context) =>
-                                HomePageFrame()), // Replace SomeOtherPage with your target page
+                            builder: (context) => HomePageFrame()),
                       );
                     },
                     style:

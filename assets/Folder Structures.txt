@@ -16,6 +16,8 @@ lib/
 │   ├── auth_provider.dart    // Authentication state management
 │   ├── chat_provider.dart    // Chat-related state management
 │   ├── user_provider.dart    // User-related state management
+│
+│
 ├── views/                    // UI pages
 │   ├── entry/                // Entry-related pages
 │   │   ├── welcome_page.dart

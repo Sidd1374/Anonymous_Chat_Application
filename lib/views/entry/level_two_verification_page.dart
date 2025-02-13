@@ -160,7 +160,7 @@ class LevelTwoPage extends StatelessWidget {
         keyboardType: TextInputType.number,
         maxLength: 14,
         decoration: InputDecoration(
-          hintText: 'AADHAAR number (12 digits)',
+          hintText: '_ _ _ _   _ _ _ _   _ _ _ _',
           hintStyle: theme.textTheme.bodyMedium
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           counterText: '',
