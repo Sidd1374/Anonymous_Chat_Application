@@ -9,11 +9,10 @@ class AppTheme extends ChangeNotifier {
   static const Color darkSecondaryColor = Color(0xFF433F3C);
   static const Color lightSecondaryColor = Color(0xFFFFF3EA);
 
-  static const Color darkSelectedIconColor = primaryColor;
+  static const Color darkSelectedIconColor = lightBackgroundColor;
   static const Color darkUnselectedIconColor = Color(0xFFDDDDDD);
-  static const Color lightSelectedIconColor = primaryColor;
+  static const Color lightSelectedIconColor = Color(0xFF282725);
   static const Color lightUnselectedIconColor = lightSecondaryColor;
-
 
   // Dark Theme
   static final ThemeData darkTheme = ThemeData(
@@ -65,24 +64,23 @@ class AppTheme extends ChangeNotifier {
     ),
     dialogTheme: const DialogTheme(
       backgroundColor: darkBackgroundColor,
-      titleTextStyle: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+      titleTextStyle: TextStyle(
+          color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
       contentTextStyle: TextStyle(color: Colors.white70),
     ),
     // bottomNavigationBarTheme: bottomNavigationBarThemeDark,
 
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: darkSecondaryColor,
-      selectedItemColor: darkSelectedIconColor,
-      unselectedItemColor: darkUnselectedIconColor,
-      selectedIconTheme: const IconThemeData(color: darkSelectedIconColor),
-      unselectedIconTheme: const IconThemeData(color: darkUnselectedIconColor),
+      selectedItemColor: primaryColor,
+      unselectedItemColor: const Color.fromRGBO(221, 221, 221, 1),
+      selectedIconTheme: IconThemeData(color: darkSelectedIconColor),
+      unselectedIconTheme: IconThemeData(color: darkUnselectedIconColor),
       selectedLabelStyle: TextStyle(color: darkSelectedIconColor),
       unselectedLabelStyle: const TextStyle(color: darkUnselectedIconColor),
-
       elevation: 8.0,
       type: BottomNavigationBarType.fixed,
     ),
-
   );
 
   // Light Theme
@@ -135,13 +133,13 @@ class AppTheme extends ChangeNotifier {
     ),
     dialogTheme: const DialogTheme(
       backgroundColor: lightBackgroundColor,
-      titleTextStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+      titleTextStyle: TextStyle(
+          color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
       contentTextStyle: TextStyle(color: Colors.black87),
     ),
-
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: primaryColor,
-      selectedItemColor: lightSelectedIconColor,
+      selectedItemColor: lightUnselectedIconColor,
       unselectedItemColor: lightUnselectedIconColor,
       selectedIconTheme: const IconThemeData(color: lightSelectedIconColor),
       unselectedIconTheme: IconThemeData(color: lightUnselectedIconColor),
@@ -150,7 +148,6 @@ class AppTheme extends ChangeNotifier {
       elevation: 8.0,
       type: BottomNavigationBarType.fixed,
     ),
-
   );
 
   static ButtonStyle elevatedButtonStyle(BuildContext context) {
@@ -190,7 +187,6 @@ class AppTheme extends ChangeNotifier {
   ThemeData _currentTheme = darkTheme;
   String _currentLogoPath = 'assets/logo/icon-no-bg-white.png';
   Color containerColor = primaryColor;
-
 
   ThemeData get currentTheme => _currentTheme;
   String get currentLogoPath => _currentLogoPath;

@@ -39,10 +39,7 @@ ChatApp is a dynamic messaging platform that enables users to connect with frien
 
 ## Team Details
 Our team comprises dedicated developers, designers, and testers who worked together to create this platform. Key contributors:
-- **Siddharth Sharma**
-    - **Phone**: +91-8988568859
-    - **Email**: sidd13704@gmail.com
-    - **LinkedIn**: [Siddharth Sharma](https://www.linkedin.com/in/siddharthsharma1374)
+
 - **Aryan Khatri**
     - **Phone**: +91-7827739709
     - **Email**: aryankhatri9811@gmail.com
@@ -51,6 +48,10 @@ Our team comprises dedicated developers, designers, and testers who worked toget
     - **Phone**: +91-7908636536
     - **Email**: aarju.pal1234@gmail.com
     - **LinkedIn**: [Aarju Pal](https://www.linkedin.com/in/aarjupal)
+- **Siddharth Sharma**
+    - **Phone**: +91-8988568859
+    - **Email**: sidd13704@gmail.com
+    - **LinkedIn**: [Siddharth Sharma](https://www.linkedin.com/in/siddharthsharma1374)
 
 ## Installation
 

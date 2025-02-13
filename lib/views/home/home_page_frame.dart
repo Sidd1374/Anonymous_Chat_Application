@@ -33,7 +33,6 @@ class _HomePageFrameState extends State<HomePageFrame> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width - 28;
     final appTheme = context.watch<AppTheme>();
 
     return Scaffold(
@@ -71,80 +70,63 @@ class _HomePageFrameState extends State<HomePageFrame> {
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(left: 8.0, right: 8.0, bottom: 4.0),
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18.r), // Curves all edges
-              child: BottomNavigationBar(
-                items: const <BottomNavigationBarItem>[
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.home),
-                    label: 'home',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.people),
-                    label: 'friends',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.history),
-                    label: 'History',
-                  ),
-                ],
-                currentIndex: _selectedIndex,
-                selectedItemColor: Theme.of(context)
-                    .bottomNavigationBarTheme
-                    .selectedItemColor,
-                unselectedItemColor: Theme.of(context)
-                    .bottomNavigationBarTheme
-                    .unselectedItemColor,
-                selectedLabelStyle: TextStyle(
+        padding:
+            const EdgeInsets.only(top: 8.0, left: 8.0, right: 8.0, bottom: 5.0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18.r),
+          child: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: _onItemTapped,
+            labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+            indicatorColor:
+                Theme.of(context).bottomNavigationBarTheme.selectedItemColor,
+            backgroundColor:
+                Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+            destinations: <Widget>[
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined,
                     color: Theme.of(context)
                         .bottomNavigationBarTheme
-                        .selectedItemColor),
-                unselectedLabelStyle: TextStyle(
-                    color: Theme.of(context)
-                        .bottomNavigationBarTheme
-                        .unselectedItemColor),
-                showUnselectedLabels: false,
-                showSelectedLabels: false,
-                onTap: _onItemTapped,
-                type: BottomNavigationBarType.fixed,
-                backgroundColor:
-                    Theme.of(context).bottomNavigationBarTheme.backgroundColor,
-              ),
-            ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              left: (width / _widgetOptions.length) * _selectedIndex +
-                  (width / _widgetOptions.length - width / 4.5) / 2.w,
-              bottom: 6,
-              child: Container(
-                width: width / 4.w,
-                height: 42.h,
-                decoration: BoxDecoration(
-                  // color: Theme.of(context).primaryColor,
-                  color: appTheme.containerColor,
-                  borderRadius: BorderRadius.circular(18.r),
-                ),
-                child: Center(
-                  child: Icon(
-                    _selectedIndex == 0
-                        ? Icons.home
-                        : _selectedIndex == 1
-                            ? Icons.people
-                            : Icons.history,
+                        .unselectedIconTheme
+                        ?.color),
+                selectedIcon: Icon(Icons.home,
                     color: Theme.of(context)
                         .bottomNavigationBarTheme
                         .selectedIconTheme
-                        ?.color,
-                  ),
-                ),
+                        ?.color),
+                label: 'Home',
+                tooltip: 'Find Someone to Chat',
               ),
-            ),
-          ],
+              NavigationDestination(
+                icon: Icon(Icons.people_outline,
+                    color: Theme.of(context)
+                        .bottomNavigationBarTheme
+                        .unselectedIconTheme
+                        ?.color),
+                selectedIcon: Icon(Icons.people,
+                    color: Theme.of(context)
+                        .bottomNavigationBarTheme
+                        .selectedIconTheme
+                        ?.color),
+                label: 'Friends',
+                tooltip: 'Strangers Turned Friends',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.history_outlined,
+                    color: Theme.of(context)
+                        .bottomNavigationBarTheme
+                        .unselectedIconTheme
+                        ?.color),
+                selectedIcon: Icon(Icons.history,
+                    color: Theme.of(context)
+                        .bottomNavigationBarTheme
+                        .selectedIconTheme
+                        ?.color),
+                label: 'History',
+                tooltip: 'Strangers You Met',
+              ),
+            ],
+          ),
         ),
       ),
     );
