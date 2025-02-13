@@ -49,7 +49,7 @@ Our team comprises dedicated developers, designers, and testers who worked toget
     - **LinkedIn**: [Aryan Khatri](https://www.linkedin.com/in/aryankhatriak)
 - **Aarju Pal**
     - **Phone**: +91-7908636536
-    - **Email**: john.smith@example.com
+    - **Email**: aarju.pal1234@gmail.com
     - **LinkedIn**: [Aarju Pal](https://www.linkedin.com/in/aarjupal)
 
 ## Installation
