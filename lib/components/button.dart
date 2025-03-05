@@ -22,13 +22,15 @@ class AppButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
 
         backgroundColor: (isPrimary)
-            ? (Theme.of(context).primaryColor)
-            : (Theme.of(context).primaryColorLight),
-        foregroundColor: (isEnabled)
-            ? (Theme.of(context).focusColor.withAlpha(255))
-            : (Theme.of(context).focusColor.withAlpha(127)),
+            ? (Theme.of(context).colorScheme.primary)
+            : (Theme.of(context).colorScheme.secondary),
 
-        fixedSize: Size(182, 50),
+        foregroundColor: (isEnabled)
+            ? (Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(255))
+            : (Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(127)),
+        
+        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 50),
+
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10)
         )
