@@ -6,6 +6,8 @@ import 'about_card_page.dart';
 class LevelTwoPage extends StatelessWidget {
   final TextEditingController _aadhaarController = TextEditingController();
 
+  LevelTwoPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

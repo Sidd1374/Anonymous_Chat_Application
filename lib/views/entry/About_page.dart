@@ -1,4 +1,4 @@
-import 'package:VEIL_Chat_Application/views/entry/about_card_page.dart';
+import 'package:veil_chat_application/views/entry/about_card_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +7,8 @@ import 'dart:io';
 // import '../home/home_test.dart';
 
 class About extends StatefulWidget {
+  const About({super.key});
+
   @override
   State<About> createState() => _AboutState();
 }

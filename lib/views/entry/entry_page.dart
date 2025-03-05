@@ -6,7 +6,7 @@ class EntryPage extends StatelessWidget {
   final double buttonWidth;
   final double borderRadius;
 
-  EntryPage({
+  const EntryPage({super.key, 
     this.buttonWidth = 150.0,
     this.borderRadius = 15,
   });

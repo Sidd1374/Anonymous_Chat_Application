@@ -1,4 +1,4 @@
-import 'package:VEIL_Chat_Application/views/home/home_page_frame.dart';
+import 'package:veil_chat_application/views/home/home_page_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,7 +6,7 @@ import '../../core/app_theme.dart';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({Key? key}) : super(key: key);
+  const RegisterPage({super.key});
 
   @override
   _RegisterPageState createState() => _RegisterPageState();
