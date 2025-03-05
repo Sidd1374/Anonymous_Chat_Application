@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:veil_chat_application/components/buttons.dart';
+import 'package:veil_chat_application/components/button.dart';
 
 class ComponentTest extends StatelessWidget {
   const ComponentTest({super.key});
@@ -14,11 +14,25 @@ class ComponentTest extends StatelessWidget {
           children: [
             // Put your components here
 
-            PrimaryButton(),
+            AppButton(
+              isPrimary: true,
+              isEnabled: true,
+              onPressed: () {},
+              text: "Primary",
+            ),
+
+            Container(height: 10),
+
+            AppButton(
+              isPrimary: false,
+              isEnabled: false,
+              onPressed: () {},
+              text: "Primary",
+            ),
 
           ],
         ),
       ),
     );
   }
-} 
+}
