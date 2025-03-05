@@ -1,4 +1,4 @@
-import 'package:veil_chat_application/components/component_test.dart';
+import 'package:veil_chat_application/components/componentTest.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
