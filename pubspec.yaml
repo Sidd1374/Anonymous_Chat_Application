@@ -84,6 +84,8 @@ flutter:
     - assets/logo/icon-black-no-bg.png
     - assets/logo/icon-no-bg-white.png
 
+    - assets/icons/*
+
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
