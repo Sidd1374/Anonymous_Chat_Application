@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:veil_chat_application/components/chat_actions_bar.dart';
+import 'package:veil_chat_application/components/input_field.dart';
 
 class ComponentTest extends StatelessWidget {
   const ComponentTest({super.key});
@@ -14,7 +14,13 @@ class ComponentTest extends StatelessWidget {
           children: [
             // Put your components here
 
-            ChatActionsBar(),
+            InputField(
+              isEnabled: true,
+              inputController: TextEditingController(),
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.done,
+              hintText: "Input Field",
+            ),
 
           ],
         ),
