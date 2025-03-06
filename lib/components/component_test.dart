@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:veil_chat_application/components/input_field.dart';
+import 'package:veil_chat_application/components/toggle_button.dart';
 
 class ComponentTest extends StatelessWidget {
   const ComponentTest({super.key});
@@ -14,13 +14,15 @@ class ComponentTest extends StatelessWidget {
           children: [
             // Put your components here
 
-            InputField(
-              isEnabled: true,
-              inputController: TextEditingController(),
-              keyboardType: TextInputType.text,
-              textInputAction: TextInputAction.done,
-              hintText: "Input Field",
+            ToggleButton(
+              onPressed: () {},
+              initialState: false,
             ),
+
+            ToggleButton(
+              onPressed: () {},
+              initialState: true,
+            )
 
           ],
         ),
