@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../home/home_page_frame.dart';
-import 'about_card_page.dart';
 
 class LevelTwoPage extends StatelessWidget {
   final TextEditingController _aadhaarController = TextEditingController();
