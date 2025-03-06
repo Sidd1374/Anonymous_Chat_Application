@@ -82,6 +82,8 @@ class ChatActionsBar extends StatelessWidget {
               )
             ),
 
+            contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 14)
+
           ),
         )),
 
