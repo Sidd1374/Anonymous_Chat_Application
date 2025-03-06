@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:veil_chat_application/components/chatActionsBar.dart';
+import 'package:veil_chat_application/components/chat_actions_bar.dart';
 
 class ComponentTest extends StatelessWidget {
   const ComponentTest({super.key});
