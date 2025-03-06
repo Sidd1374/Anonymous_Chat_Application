@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class ChatActionsBar extends StatelessWidget {
-  final TextEditingController inputTextController = TextEditingController();
+  final TextEditingController inputTextController;
 
-  ChatActionsBar({super.key});
+  const ChatActionsBar({
+    super.key,
+    required this.inputTextController
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +54,8 @@ class ChatActionsBar extends StatelessWidget {
               color: Theme.of(context).textTheme.bodySmall?.color,
               fontWeight: FontWeight.w100,
           ),
+
+          cursorColor: Theme.of(context).textTheme.bodyMedium?.color,
 
           decoration: InputDecoration(
 
