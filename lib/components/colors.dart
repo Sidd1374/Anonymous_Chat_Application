@@ -17,49 +17,15 @@ class DarkColors {
 }
 
 /**
-  These colors need to be assigned to respective themes (light and dark).
-  I am using `Theme.of(context)` to access default colors, so to make it
-  work seamlessly, we need to assign these colors to each theme (light 
-  and dark) of our app.
-
-  This should be in `main.dart`:
-
-  return MaterialApp(
-
-    theme: ThemeData(
-
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: LightColors.background,
-      primaryColor: LightColors.primary,
-
-      colorScheme: ColorScheme.light(
-        primary: LightColors.primary,
-        secondary: LightColors.secondary,
-      ),
-
-      textTheme: TextTheme(
-        bodySmall: TextStyle(color: LightColors.text),
-        bodyMedium: TextStyle(color: LightColors.textAlt)
-      ),
-    ),
-
-    darkTheme: ThemeData(
-
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: DarkColors.background,
-      primaryColor: DarkColors.primary,
-
-      colorScheme: ColorScheme.dark(
-        primary: DarkColors.primary,
-        secondary: DarkColors.secondary,
-      ),
-
-      textTheme: TextTheme(
-        bodySmall: TextStyle(color: DarkColors.text),
-        bodyMedium: TextStyle(color: DarkColors.textAlt)
-      ),
-    ),
-    themeMode: ThemeMode.system
-  );
-
+ * 
+ * Assign these to theme:
+ * 
+ *   scaffoldBackgroundColor    -> background
+ * 
+ *   colorscheme.primary        -> primary
+ *   colorscheme.secondary      -> secondary
+ * 
+ *   textTheme.bodySmall.color  -> text
+ *   textTheme.bodyMedium.color -> textAlt
+ * 
 */
