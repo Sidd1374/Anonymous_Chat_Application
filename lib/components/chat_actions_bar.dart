@@ -26,6 +26,7 @@ class ChatActionsBar extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.primary,
 
             fixedSize: Size(50, 50),
+            elevation: 4,
             padding: EdgeInsets.all(0)
           ),
 
@@ -37,60 +38,65 @@ class ChatActionsBar extends StatelessWidget {
           )
         ),
 
-        Expanded(child: TextField(
+        Expanded(child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(25),
 
-          // Configuration
-          controller: inputTextController,
-
-          keyboardType: TextInputType.text,
-          textInputAction: TextInputAction.send,
-
-          autofocus: true,
-          minLines: 1,
-          maxLines: 5,
-
-          onSubmitted: onSend(inputTextController.text),   // Implementation of Send function.
-
-          // Styling
-          style: TextStyle(
-              color: Theme.of(context).textTheme.bodySmall?.color,
-              fontWeight: FontWeight.w100,
-          ),
-
-          cursorColor: Theme.of(context).textTheme.bodyMedium?.color,
-
-          decoration: InputDecoration(
-            
-            hintText: "Write a message...",
-            hintStyle: TextStyle(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withAlpha(150),
-              fontWeight: FontWeight.w100,
+          child: TextField(
+          
+            // Configuration
+            controller: inputTextController,
+          
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.send,
+          
+            autofocus: true,
+            minLines: 1,
+            maxLines: 5,
+          
+            onSubmitted: onSend(inputTextController.text),   // Implementation of Send function.
+          
+            // Styling
+            style: TextStyle(
+                color: Theme.of(context).textTheme.bodySmall?.color,
+                fontWeight: FontWeight.w100,
             ),
-
-            fillColor: Theme.of(context).colorScheme.secondary,
-            filled: true,
-
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(25)),
-              borderSide: BorderSide(
-                color: Colors.transparent
+          
+            cursorColor: Theme.of(context).textTheme.bodyMedium?.color,
+          
+            decoration: InputDecoration(
+              
+              hintText: "Write a message...",
+              hintStyle: TextStyle(
+                color: Theme.of(context).textTheme.bodySmall?.color?.withAlpha(150),
+                fontWeight: FontWeight.w100,
               ),
+          
+              fillColor: Theme.of(context).colorScheme.secondary,
+              filled: true,
+          
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(25)),
+                borderSide: BorderSide(
+                  color: Colors.transparent
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(25)),
+                borderSide: BorderSide(
+                  color: Colors.transparent
+                )
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(25)),
+                borderSide: BorderSide(
+                  color: Colors.transparent
+                )
+              ),
+          
+              contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 14)
+          
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(25)),
-              borderSide: BorderSide(
-                color: Colors.transparent
-              )
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(25)),
-              borderSide: BorderSide(
-                color: Colors.transparent
-              )
-            ),
-
-            contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 14)
-
           ),
         )),
 
@@ -100,7 +106,8 @@ class ChatActionsBar extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.primary,
 
             fixedSize: Size(50, 50),
-            padding: EdgeInsets.all(0)
+            padding: EdgeInsets.all(0),
+            elevation: 4
           ),
 
           onPressed: () {}, 
