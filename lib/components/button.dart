@@ -18,7 +18,7 @@ class AppButton extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return ElevatedButton(
-      onPressed: () => {},
+      onPressed: onPressed,
       style: ElevatedButton.styleFrom(
 
         backgroundColor: (isPrimary)
