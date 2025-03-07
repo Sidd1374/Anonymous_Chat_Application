@@ -41,12 +41,16 @@ class _ToggleButtonState extends State<ToggleButton> {
         backgroundColor: Theme.of(context).colorScheme.secondary,
         padding: EdgeInsets.zero,
         elevation: 4,
+        // shadowColor: (isToggled) 
+        //         ? (Theme.of(context).colorScheme.primary.withAlpha(100))
+        //         : (Theme.of(context).scaffoldBackgroundColor.withAlpha(100)),
+        
 
-        side: BorderSide(
-          color: (isToggled)
-                  ? (Theme.of(context).colorScheme.primary)
-                  : (Theme.of(context).scaffoldBackgroundColor),
-        ),
+        // side: BorderSide(
+        //   color: (isToggled)
+        //           ? (Theme.of(context).colorScheme.primary)
+        //           : (Theme.of(context).scaffoldBackgroundColor),
+        // ),
 
         minimumSize: Size(40, 24),
         fixedSize: Size(40, 24),
