@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 
 class InputField extends StatelessWidget {
   final TextEditingController inputController; 
-  final TextInputType keyboardType;
-  final TextInputAction textInputAction; 
-  final String hintText;
+  final TextInputType            keyboardType;
+  final TextInputAction       textInputAction; 
+  final String                       hintText;
+  final bool                       isObscured;
 
   const InputField({
     super.key,
     required this.inputController,
     required this.keyboardType,
     required this.textInputAction,
-    required this.hintText
+    required this.hintText,
+    required this.isObscured
   });
 
   @override
@@ -22,6 +24,7 @@ class InputField extends StatelessWidget {
         controller: inputController,
         keyboardType: keyboardType,
         textInputAction: textInputAction,
+        obscureText: isObscured,
         minLines: 1, maxLines: 1,
 
         // Styling
