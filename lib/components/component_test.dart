@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:veil_chat_application/components/button.dart';
+import 'package:veil_chat_application/components/chat_actions_bar.dart';
+import 'package:veil_chat_application/components/input_field.dart';
 import 'package:veil_chat_application/components/toggle_button.dart';
 
 class ComponentTest extends StatelessWidget {
@@ -11,18 +14,64 @@ class ComponentTest extends StatelessWidget {
 
       body: Center(
         child: Column(
+          spacing: 10,
           children: [
             // Put your components here
 
-            ToggleButton(
+            AppButton(
+              isPrimary: true,
+              isEnabled: true,
               onPressed: () {},
-              initialState: false,
+              text: "Button",
             ),
 
-            ToggleButton(
+            AppButton(
+              isPrimary: false,
+              isEnabled: true,
               onPressed: () {},
-              initialState: true,
-            )
+              text: "Button",
+            ),
+
+            ChatActionsBar(
+              inputTextController: TextEditingController(),
+              onSend: (s) {},
+            ),
+
+            InputField(
+              inputController: TextEditingController(),
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              isPassword: false,
+              hintText: "Email",
+            ),
+
+            InputField(
+              inputController: TextEditingController(),
+              keyboardType: TextInputType.visiblePassword,
+              textInputAction: TextInputAction.next,
+              isPassword: true,
+              hintText: "Password",
+            ),
+
+            Row(
+              children: [
+                Spacer(flex: 1),
+
+                ToggleButton(
+                  onPressed: () {},
+                  initialState: false,
+                ),
+
+                Spacer(flex: 1),
+
+                ToggleButton(
+                  onPressed: () {},
+                  initialState: true,
+                ),
+
+                Spacer(flex: 1),
+              ],
+            ),
 
           ],
         ),
