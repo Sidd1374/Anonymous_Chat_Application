@@ -3,10 +3,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 class ChatActionsBar extends StatelessWidget {
   final TextEditingController inputTextController;
+  final Function(String)                   onSend;
 
   const ChatActionsBar({
     super.key,
-    required this.inputTextController
+    required this.inputTextController,
+    required this.onSend
   });
 
   @override
@@ -47,7 +49,7 @@ class ChatActionsBar extends StatelessWidget {
           minLines: 1,
           maxLines: 5,
 
-          onSubmitted: (String inputText) {},   // Implementation of Send function.
+          onSubmitted: onSend(inputTextController.text),   // Implementation of Send function.
 
           // Styling
           style: TextStyle(
@@ -58,7 +60,7 @@ class ChatActionsBar extends StatelessWidget {
           cursorColor: Theme.of(context).textTheme.bodyMedium?.color,
 
           decoration: InputDecoration(
-
+            
             hintText: "Write a message...",
             hintStyle: TextStyle(
               color: Theme.of(context).textTheme.bodySmall?.color?.withAlpha(150),
@@ -72,7 +74,7 @@ class ChatActionsBar extends StatelessWidget {
               borderRadius: BorderRadius.all(Radius.circular(25)),
               borderSide: BorderSide(
                 color: Colors.transparent
-              )
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(25)),
@@ -87,7 +89,7 @@ class ChatActionsBar extends StatelessWidget {
               )
             ),
 
-            contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 14)
+            contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 14)
 
           ),
         )),
