@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:veil_chat_application/components/colors.dart';
 
 class AppTheme extends ChangeNotifier {
   // Global constants for colors
@@ -17,27 +18,28 @@ class AppTheme extends ChangeNotifier {
   // Dark Theme
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: darkBackgroundColor,
-    primaryColor: primaryColor,
+    scaffoldBackgroundColor: DarkColors.background,
+    primaryColor: DarkColors.primary,
     colorScheme: const ColorScheme.dark(
+      primary: DarkColors.primary,
       secondary: darkSecondaryColor,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: darkBackgroundColor,
-      iconTheme: IconThemeData(color: Colors.white),
-      titleTextStyle: TextStyle(color: Colors.white, fontSize: 20),
+      backgroundColor: DarkColors.secondary,
+      iconTheme: IconThemeData(color: DarkColors.text),
+      titleTextStyle: TextStyle(color: DarkColors.textAlt, fontSize: 20),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: darkSecondaryColor,
+      fillColor: DarkColors.secondary,
       border: const OutlineInputBorder(
-        borderSide: BorderSide(color: primaryColor),
+        borderSide: BorderSide(color: DarkColors.primary),
       ),
       enabledBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: primaryColor),
+        borderSide: BorderSide(color: DarkColors.primary),
       ),
       focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: primaryColor),
+        borderSide: BorderSide(color: DarkColors.primary),
       ),
       labelStyle: const TextStyle(color: Colors.white),
       hintStyle: const TextStyle(color: Colors.white70),
@@ -54,30 +56,31 @@ class AppTheme extends ChangeNotifier {
       foregroundColor: Colors.white,
     ),
     textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: Colors.white),
-      bodyMedium: TextStyle(color: Colors.white70),
-      titleLarge: TextStyle(color: Colors.white, fontSize: 20),
+      bodyLarge: TextStyle(color: DarkColors.text),
+      bodyMedium: TextStyle(color: DarkColors.textAlt),
+      bodySmall: TextStyle(color: DarkColors.text),
+      titleLarge: TextStyle(color: DarkColors.text, fontSize: 20),
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: primaryColor,
-      contentTextStyle: TextStyle(color: Colors.white),
+      backgroundColor: DarkColors.secondary,
+      contentTextStyle: TextStyle(color: DarkColors.text),
     ),
     dialogTheme: const DialogTheme(
-      backgroundColor: darkBackgroundColor,
+      backgroundColor: DarkColors.secondary,
       titleTextStyle: TextStyle(
-          color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-      contentTextStyle: TextStyle(color: Colors.white70),
+          color: DarkColors.text, fontSize: 20, fontWeight: FontWeight.bold),
+      contentTextStyle: TextStyle(color: DarkColors.text),
     ),
     // bottomNavigationBarTheme: bottomNavigationBarThemeDark,
 
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: darkSecondaryColor,
-      selectedItemColor: primaryColor,
-      unselectedItemColor: const Color.fromRGBO(221, 221, 221, 1),
-      selectedIconTheme: IconThemeData(color: darkSelectedIconColor),
-      unselectedIconTheme: IconThemeData(color: darkUnselectedIconColor),
-      selectedLabelStyle: TextStyle(color: darkSelectedIconColor),
-      unselectedLabelStyle: const TextStyle(color: darkUnselectedIconColor),
+      backgroundColor: DarkColors.secondary,
+      selectedItemColor: DarkColors.primary,
+      unselectedItemColor: Colors.transparent,
+      selectedIconTheme: IconThemeData(color: DarkColors.text),
+      unselectedIconTheme: IconThemeData(color: DarkColors.text),
+      selectedLabelStyle: TextStyle(color: DarkColors.textAlt),
+      unselectedLabelStyle: const TextStyle(color: DarkColors.textAlt),
       elevation: 8.0,
       type: BottomNavigationBarType.fixed,
     ),
@@ -86,15 +89,16 @@ class AppTheme extends ChangeNotifier {
   // Light Theme
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
-    scaffoldBackgroundColor: lightBackgroundColor,
+    scaffoldBackgroundColor: LightColors.background,
     primaryColor: primaryColor,
     colorScheme: const ColorScheme.light(
+      primary: LightColors.primary,
       secondary: lightSecondaryColor,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: lightBackgroundColor,
-      iconTheme: IconThemeData(color: Colors.black),
-      titleTextStyle: TextStyle(color: Colors.black, fontSize: 20),
+      backgroundColor: LightColors.secondary,
+      iconTheme: IconThemeData(color: LightColors.primary),
+      titleTextStyle: TextStyle(color: LightColors.textAlt, fontSize: 20),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -119,32 +123,33 @@ class AppTheme extends ChangeNotifier {
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
+      backgroundColor: LightColors.primary,
+      foregroundColor: LightColors.textAlt,
     ),
     textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: Colors.black),
-      bodyMedium: TextStyle(color: Colors.black87),
-      titleLarge: TextStyle(color: Colors.black, fontSize: 20),
+      bodyLarge: TextStyle(color: LightColors.text),
+      bodyMedium: TextStyle(color: LightColors.textAlt),
+      bodySmall: TextStyle(color: LightColors.text),
+      titleLarge: TextStyle(color: LightColors.text, fontSize: 20),
     ),
     snackBarTheme: const SnackBarThemeData(
-      backgroundColor: primaryColor,
-      contentTextStyle: TextStyle(color: Colors.black),
+      backgroundColor: LightColors.secondary,
+      contentTextStyle: TextStyle(color: LightColors.text),
     ),
     dialogTheme: const DialogTheme(
-      backgroundColor: lightBackgroundColor,
+      backgroundColor: LightColors.secondary,
       titleTextStyle: TextStyle(
-          color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
-      contentTextStyle: TextStyle(color: Colors.black87),
+          color: LightColors.text, fontSize: 20, fontWeight: FontWeight.bold),
+      contentTextStyle: TextStyle(color: LightColors.text),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: primaryColor,
-      selectedItemColor: lightUnselectedIconColor,
-      unselectedItemColor: lightUnselectedIconColor,
-      selectedIconTheme: const IconThemeData(color: lightSelectedIconColor),
-      unselectedIconTheme: IconThemeData(color: lightUnselectedIconColor),
-      selectedLabelStyle: const TextStyle(color: lightSelectedIconColor),
-      unselectedLabelStyle: TextStyle(color: lightUnselectedIconColor),
+      backgroundColor: LightColors.primary,
+      selectedItemColor: LightColors.secondary,
+      unselectedItemColor: Colors.transparent,
+      selectedIconTheme: const IconThemeData(color: LightColors.text),
+      unselectedIconTheme: IconThemeData(color: LightColors.textAlt),
+      selectedLabelStyle: const TextStyle(color: LightColors.text),
+      unselectedLabelStyle: TextStyle(color: LightColors.textAlt),
       elevation: 8.0,
       type: BottomNavigationBarType.fixed,
     ),
