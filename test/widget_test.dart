@@ -8,7 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:VEIL_Chat_Application/main.dart';
+import 'package:veil_chat_application/main.dart';
 
 
 void main() {
