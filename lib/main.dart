@@ -1,9 +1,10 @@
-import 'package:veil_chat_application/components/component_test.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'core/app_theme.dart';
-// import 'views/entry/login_page.dart';
+
+import 'views/entry/login_page.dart';
+// import 'package:veil_chat_application/components/component_test.dart';
 
 void main() {
   runApp(MyApp());
@@ -26,7 +27,8 @@ class MyApp extends StatelessWidget {
                 debugShowCheckedModeBanner: false,
                 title: 'ChatApp',
                 theme: appTheme.currentTheme,
-                home: const ComponentTest(),
+                // home: const ComponentTest(),
+                home: LoginPage(),
               );
             },
           );
