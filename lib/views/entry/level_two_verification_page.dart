@@ -13,23 +13,25 @@ class LevelTwoPage extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            SizedBox(height: 20.h),
-            _buildTitle(context),
-            SizedBox(height: 80.h),
-            _buildInstructions(context),
-            SizedBox(height: 20.h),
-            _buildAadhaarInput(context),
-            SizedBox(height: 120.h),
-            _buildPrivacyText(context),
-            SizedBox(height: 80.h),
-            _buildContinueButton(context),
-            SizedBox(height: 20.h),
-            _buildGoBackButton(context),
-          ],
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              SizedBox(height: 20.h),
+              _buildTitle(context),
+              SizedBox(height: 80.h),
+              _buildInstructions(context),
+              SizedBox(height: 20.h),
+              _buildAadhaarInput(context),
+              SizedBox(height: 120.h),
+              _buildPrivacyText(context),
+              SizedBox(height: 80.h),
+              _buildContinueButton(context),
+              SizedBox(height: 20.h),
+              _buildGoBackButton(context),
+            ],
+          ),
         ),
       ),
     );
