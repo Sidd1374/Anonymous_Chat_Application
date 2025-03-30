@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 import 'core/app_theme.dart';
-
 import 'views/entry/login_page.dart';
-// import 'package:veil_chat_application/components/component_test.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Required for async in main
+  await Firebase.initializeApp(); // Initialize Firebase
+
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -27,7 +31,6 @@ class MyApp extends StatelessWidget {
                 debugShowCheckedModeBanner: false,
                 title: 'ChatApp',
                 theme: appTheme.currentTheme,
-                // home: const ComponentTest(),
                 home: LoginPage(),
               );
             },

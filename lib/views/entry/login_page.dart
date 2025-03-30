@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // import '../home/home_page_frame.dart';
 import '../../core/app_theme.dart';
@@ -18,6 +19,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -91,9 +94,9 @@ class _LoginPageState extends State<LoginPage> {
                     Text(
                       "Welcome!",
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 28.sp,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 28.sp,
+                          ),
                     ),
                     SizedBox(height: 10.h),
                     Text(
@@ -105,6 +108,8 @@ class _LoginPageState extends State<LoginPage> {
                       width: 350.w,
                       height: 50.h,
                       child: TextFormField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: AppTheme.textFieldDecoration(
                           context,
                           label: "Email",
@@ -127,6 +132,8 @@ class _LoginPageState extends State<LoginPage> {
                       height: 50.h,
                       child: TextFormField(
                         obscureText: !_isPasswordVisible,
+                        controller: passwordController,
+                        keyboardType: TextInputType.visiblePassword,
                         decoration: AppTheme.textFieldDecoration(
                           context,
                           label: "Password",
@@ -170,9 +177,10 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     SizedBox(height: 30.h),
                     ElevatedButton(
-                      onPressed: () => _navigateToHome(context),
+                      onPressed: _loginUser,
                       style: AppTheme.elevatedButtonStyle(context),
-                      child: Text("Continue", style: TextStyle(fontSize: 16.sp)),
+                      child:
+                          Text("Continue", style: TextStyle(fontSize: 16.sp)),
                     ),
                     SizedBox(height: 20.h),
                     Row(
@@ -221,6 +229,13 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
   void _navigateToHome(BuildContext context) {
     Navigator.push(
       context,
@@ -232,6 +247,47 @@ class _LoginPageState extends State<LoginPage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => RegisterPage()),
+    );
+  }
+
+  Future<void> _loginUser() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final email = emailController.text.trim();
+        final password = passwordController.text;
+
+        UserCredential userCredential = await FirebaseAuth.instance
+            .signInWithEmailAndPassword(email: email, password: password);
+
+        print("User logged in: ${userCredential.user?.uid}");
+        _navigateToHome(context);
+      } on FirebaseAuthException catch (e) {
+        String message = 'Login failed';
+        if (e.code == 'user-not-found') {
+          message = 'No user found for that email.';
+        } else if (e.code == 'wrong-password') {
+          message = 'Wrong password.';
+        }
+        _showErrorDialog(message);
+      } catch (e) {
+        _showErrorDialog("Something went wrong.");
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Login Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+        ],
+      ),
     );
   }
 }
