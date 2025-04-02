@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// import '../home/home_page_frame.dart';
 import '../../core/app_theme.dart';
 import 'register_page.dart';
-// import '../test_1.dart';
 import 'About_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -74,156 +72,169 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
         ),
-        body: SingleChildScrollView(
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0.w),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 80.h),
-                    Image.asset(
-                      appTheme.currentLogoPath,
-                      height: 80.sp,
-                      width: 80.sp,
-                    ),
-                    SizedBox(height: 20.h),
-                    Text(
-                      "Welcome!",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 28.sp,
-                          ),
-                    ),
-                    SizedBox(height: 10.h),
-                    Text(
-                      "Sign in to your account",
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    SizedBox(height: 40.h),
-                    SizedBox(
-                      width: 350.w,
-                      height: 50.h,
-                      child: TextFormField(
-                        controller: emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: AppTheme.textFieldDecoration(
-                          context,
-                          label: "Email",
-                          prefixIcon: Icons.email,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isPortrait = constraints.maxHeight > constraints.maxWidth;
+
+            return SingleChildScrollView(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0.w),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(height: isPortrait ? 80.h : 40.h),
+                        Image.asset(
+                          appTheme.currentLogoPath,
+                          height: isPortrait ? 80.sp : 60.sp,
+                          width: isPortrait ? 80.sp : 60.sp,
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your email';
-                          }
-                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                            return 'Enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-                    SizedBox(
-                      width: 350.w,
-                      height: 50.h,
-                      child: TextFormField(
-                        obscureText: !_isPasswordVisible,
-                        controller: passwordController,
-                        keyboardType: TextInputType.visiblePassword,
-                        decoration: AppTheme.textFieldDecoration(
-                          context,
-                          label: "Password",
-                          prefixIcon: Icons.lock,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Theme.of(context).primaryColor,
+                        SizedBox(height: isPortrait ? 20.h : 10.h),
+                        Text(
+                          "Welcome!",
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: isPortrait ? 28.sp : 20.sp,
+                                  ),
+                        ),
+                        SizedBox(height: isPortrait ? 10.h : 5.h),
+                        Text(
+                          "Sign in to your account",
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        SizedBox(height: isPortrait ? 40.h : 20.h),
+                        SizedBox(
+                          width: isPortrait ? 350.w : 300.w,
+                          height: 50.h,
+                          child: TextFormField(
+                            controller: emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: AppTheme.textFieldDecoration(
+                              context,
+                              label: "Email",
+                              prefixIcon: Icons.email,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                  .hasMatch(value)) {
+                                return 'Enter a valid email';
+                              }
+                              return null;
                             },
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your password';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          print('Forgot Password Pressed');
-                        },
-                        child: Text(
-                          "Forgot Password?",
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Theme.of(context).primaryColor,
+                        SizedBox(height: 10.h),
+                        SizedBox(
+                          width: isPortrait ? 350.w : 300.w,
+                          height: 50.h,
+                          child: TextFormField(
+                            obscureText: !_isPasswordVisible,
+                            controller: passwordController,
+                            keyboardType: TextInputType.visiblePassword,
+                            decoration: AppTheme.textFieldDecoration(
+                              context,
+                              label: "Password",
+                              prefixIcon: Icons.lock,
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isPasswordVisible
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isPasswordVisible = !_isPasswordVisible;
+                                  });
+                                },
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              return null;
+                            },
                           ),
                         ),
-                      ),
-                    ),
-                    SizedBox(height: 30.h),
-                    ElevatedButton(
-                      onPressed: _loginUser,
-                      style: AppTheme.elevatedButtonStyle(context),
-                      child:
-                          Text("Continue", style: TextStyle(fontSize: 16.sp)),
-                    ),
-                    SizedBox(height: 20.h),
-                    Row(
-                      children: [
-                        Expanded(child: Divider(thickness: 1)),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10.w),
-                          child: Text("or ", style: TextStyle(fontSize: 14.sp)),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              print('Forgot Password Pressed');
+                            },
+                            child: Text(
+                              "Forgot Password?",
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ),
                         ),
-                        Expanded(child: Divider(thickness: 1)),
+                        SizedBox(height: isPortrait ? 30.h : 20.h),
+                        ElevatedButton(
+                          onPressed: _loginUser,
+                          style: AppTheme.elevatedButtonStyle(context),
+                          child: Text(
+                            "Continue",
+                            style: TextStyle(fontSize: 16.sp),
+                          ),
+                        ),
+                        SizedBox(height: isPortrait ? 20.h : 10.h),
+                        Row(
+                          children: [
+                            Expanded(child: Divider(thickness: 1)),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 10.w),
+                              child: Text(
+                                "or ",
+                                style: TextStyle(fontSize: 14.sp),
+                              ),
+                            ),
+                            Expanded(child: Divider(thickness: 1)),
+                          ],
+                        ),
+                        SizedBox(height: isPortrait ? 20.h : 10.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            OutlinedButton(
+                              onPressed: () => _navigateToRegister(context),
+                              style: AppTheme.outlinedButtonStyle(context),
+                              child: Image.asset(
+                                appTheme.currentLogoPath,
+                                height: 30,
+                                width: 30,
+                              ),
+                            ),
+                            OutlinedButton(
+                              onPressed: () {
+                                print('Continue with Google');
+                              },
+                              style: AppTheme.outlinedButtonStyle(context),
+                              child: Image.asset(
+                                "assets/logo/Google_logo.png",
+                                height: 30,
+                                width: 30,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    SizedBox(height: 20.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        OutlinedButton(
-                          onPressed: () => _navigateToRegister(context),
-                          style: AppTheme.outlinedButtonStyle(context),
-                          child: Image.asset(
-                            appTheme.currentLogoPath,
-                            height: 30,
-                            width: 30,
-                          ),
-                        ),
-                        OutlinedButton(
-                          onPressed: () {
-                            print('Continue with Google');
-                          },
-                          style: AppTheme.outlinedButtonStyle(context),
-                          child: Image.asset(
-                            "assets/logo/Google_logo.png",
-                            height: 30,
-                            width: 30,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

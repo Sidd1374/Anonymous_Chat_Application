@@ -59,11 +59,27 @@ class LevelTwoPage extends StatelessWidget {
                   'Your AADHAAR number is used only during verification, and is never stored in the server or exposed to the developers or admins. For more details, please read our ',
               style: theme.textTheme.bodyMedium,
             ),
-            TextSpan(
-              text: 'Privacy Terms',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: TextButton(
+              onPressed: () {
+                // Add your privacy terms navigation logic here
+              },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero, // Remove extra padding
+                minimumSize: Size.zero, // Remove minimum size
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Shrink tap area
+              ),
+              child: Text(
+                'Privacy Terms',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.primaryColor,
+                ),
+              ),
+              ),
             ),
+            
             TextSpan(
               text: '.',
               style: theme.textTheme.bodyMedium,
@@ -88,9 +104,12 @@ class LevelTwoPage extends StatelessWidget {
             ),
             TextSpan(
               text: 'AADHAAR',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.primaryColor, // Add desired color here
+              ),
             ),
+        
             TextSpan(
               text: ' number below.',
               style: theme.textTheme.bodyMedium,
@@ -144,53 +163,59 @@ class LevelTwoPage extends StatelessWidget {
   Widget _buildAadhaarInput(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: 324.w,
-      height: 50.h,
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      width: 300.w, // Slightly larger than the input field for border effect
+      height: 52.h, // Slightly larger than the input field for border effect
       decoration: BoxDecoration(
-        color: theme.primaryColor,
-        borderRadius: BorderRadius.circular(10.r),
-        boxShadow: [
-          BoxShadow(
-            color: theme.primaryColor,
-            blurRadius: 10.r,
-            offset: Offset(0, 4.h),
-          )
-        ],
+        color: theme.colorScheme.surface, // Match input field background color
+        borderRadius: BorderRadius.circular(12.r), // Slightly larger radius
       ),
-      child: TextField(
-        controller: _aadhaarController,
-        keyboardType: TextInputType.number,
-        maxLength: 14,
-        decoration: InputDecoration(
-          hintText: '_ _ _ _   _ _ _ _   _ _ _ _',
-          hintStyle: theme.textTheme.bodyMedium
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          counterText: '',
-
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide.none,
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide.none,
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          border: OutlineInputBorder(
-            borderSide: BorderSide.none,
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          fillColor: theme.inputDecorationTheme
-              .fillColor, // Set the desired background color here
-          filled: true,
+      child: Container(
+        width: 324.w,
+        height: 50.h,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        decoration: BoxDecoration(
+          color: theme.primaryColor,
+          borderRadius: BorderRadius.circular(10.r),
+          boxShadow: [
+            BoxShadow(
+              color: theme.primaryColor,
+              blurRadius: 10.r,
+              offset: Offset(0, 1.h),
+            )
+          ],
         ),
-        textAlign: TextAlign.center,
-        onChanged: (value) {
-          _aadhaarController.text = _formatAadhaarNumber(value);
-          _aadhaarController.selection = TextSelection.fromPosition(
-            TextPosition(offset: _aadhaarController.text.length),
-          );
-        },
+        child: TextField(
+          controller: _aadhaarController,
+          keyboardType: TextInputType.number,
+          maxLength: 14,
+          decoration: InputDecoration(
+            hintText: '_ _ _ _   _ _ _ _   _ _ _ _',
+            hintStyle: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            counterText: '',
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            border: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            fillColor: theme.colorScheme.surface, // Updated background color
+            filled: true,
+          ),
+          textAlign: TextAlign.center,
+          onChanged: (value) {
+            _aadhaarController.text = _formatAadhaarNumber(value);
+            _aadhaarController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _aadhaarController.text.length),
+            );
+          },
+        ),
       ),
     );
   }

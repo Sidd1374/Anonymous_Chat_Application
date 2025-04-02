@@ -24,7 +24,7 @@ class EntryPage extends StatelessWidget {
           //       'assets/animation/home_animation_1735286422424.json',
           //       fit: BoxFit.scaleDown,
           //     ),
-          //
+          
           //   ),
           // ),
 
