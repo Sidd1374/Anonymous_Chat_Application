@@ -1,1 +1,24 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"veil-app-anonymous","appId":"1:213748404792:android:d53d841bb34c03eba30ccd","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"veil-app-anonymous","configurations":{"android":"1:213748404792:android:d53d841bb34c03eba30ccd","ios":"1:213748404792:ios:6def9305217dde19a30ccd","web":"1:213748404792:web:bc7d737e9710205ea30ccd","windows":"1:213748404792:web:228bd505427af283a30ccd"}}}}}}
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "veil-app-anonymous",
+                    "appId": "1:213748404792:android:d53d841bb34c03eba30ccd",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "veil-app-anonymous",
+                    "configurations": {
+                        "android": "1:213748404792:android:d53d841bb34c03eba30ccd",
+                        "ios": "1:213748404792:ios:6def9305217dde19a30ccd",
+                        "web": "1:213748404792:web:bc7d737e9710205ea30ccd",
+                        "windows": "1:213748404792:web:228bd505427af283a30ccd"
+                    }
+                }
+            }
+        }
+    }
+}
