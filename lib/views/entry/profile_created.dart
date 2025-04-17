@@ -213,8 +213,12 @@ class ProfileCreated extends StatelessWidget {
         ElevatedButton(
           onPressed: () {
             // Handle verify action
-            Navigator.push(context,
-                MaterialPageRoute(builder: (context) => LevelTwoPage()));
+            // Navigator.push(context,
+            //     MaterialPageRoute(builder: (context) => LevelTwoPage()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AadhaarVerification()),
+            );
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.primaryColor,

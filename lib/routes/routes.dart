@@ -34,7 +34,8 @@ class AppRoutes {
   static const String faceVerification = '/face-verification';
   static const String profileCreated = '/profile-created';
   static const String aadhaarVerification = '/aadhaar-verification';
-  static const String aadhaarVerificationWaiting = '/aadhaar-verification-waiting';
+  static const String aadhaarVerificationWaiting =
+      '/aadhaar-verification-waiting';
 
   // Main routes
   static const String homepage = '/homepage';
@@ -47,25 +48,26 @@ class AppRoutes {
   static const String profile = '/profile';
 
   static Map<String, WidgetBuilder> get routes => {
-    // Entry category
-    welcome: (context) => const Welcome(),
-    register: (context) => const Register(),
-    login: (context) => const Login(),
-    verifyOtp: (context) => const VerifyOtp(),
-    aboutYou: (context) => const AboutYou(),
-    faceVerification: (context) => const FaceVerification(),
-    profileCreated: (context) => const ProfileCreated(),
-    aadhaarVerification: (context) => const AadhaarVerification(),
-    aadhaarVerificationWaiting: (context) => const AadhaarVerificationWaiting(),
+        // Entry category
+        welcome: (context) => const Welcome(),
+        register: (context) => const Register(),
+        login: (context) => const Login(),
+        // verifyOtp: (context) => VerifyOtp(),
+        aboutYou: (context) => const AboutYou(),
+        // faceVerification: (context) => const FaceVerification(),
+        // profileCreated: (context) => const ProfileCreated(),
+        // aadhaarVerification: (context) => const AadhaarVerification(),
+        // aadhaarVerificationWaiting: (context) =>
+        //     const AadhaarVerificationWaiting(),
 
-    // Main pages
-    homepage: (context) => const FriendsList(),
-    friendsList: (context) => const FriendsList(),
-    history: (context) => const History(),
-    chatOptions: (context) => const ChatOptions(),
-    searchingChat: (context) => const SearchingChat(),
-    chatArea: (context) => const ChatArea(),
-    settings: (context) => const Settings(),
-    profile: (context) => const Profile(),
-  };
+        // Main pages
+        homepage: (context) => const HomePageFrame(),
+        friendsList: (context) => const FriendsList(),
+        history: (context) => const History(),
+        // chatOptions: (context) => const ChatOptions(),
+        // searchingChat: (context) => const SearchingChat(),
+        // chatArea: (context) => const ChatArea(),
+        // settings: (context) => const Settings(),
+        // profile: (context) => const Profile(),
+      };
 }

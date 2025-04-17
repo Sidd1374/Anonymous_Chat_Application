@@ -46,6 +46,7 @@ dependencies:
   firebase_storage: ^12.4.5
   firebase_app_check: ^0.3.2+5
   shared_preferences: ^2.5.3
+  google_sign_in: ^6.3.0
 
 
 dev_dependencies:
@@ -91,6 +92,9 @@ flutter:
     - assets/icons/icon_search.svg
     - assets/icons/icon_send.svg
     - assets/icons/icon_verified.svg
+
+    - assets/Profile_image.png
+
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

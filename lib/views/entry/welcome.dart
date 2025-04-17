@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:veil_chat_application/core/constants.dart';
+import 'package:veil_chat_application/views/entry/login.dart';
 import 'package:veil_chat_application/widgets/button.dart';
 
 class Welcome extends StatelessWidget {
@@ -21,28 +22,27 @@ class Welcome extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
-
           spacing: 30,
-          
           children: [
             Text(
               TextConstants.appName,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-        
             Lottie.asset("assets/animation/ani-1.json"),
-        
             Text(
               TextConstants.welcomeText,
               style: Theme.of(context).textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),
-        
             AppButton(
-                isPrimary: true,
-                isEnabled: true,
-                onPressed: () => {},
-                text: "Continue")
+              isPrimary: true,
+              isEnabled: true,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()),
+              ),
+              text: "Continue",
+            ),
           ],
         ),
       ),
