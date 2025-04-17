@@ -67,6 +67,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '213748404792',
     projectId: 'veil-app-anonymous',
     storageBucket: 'veil-app-anonymous.firebasestorage.app',
+    iosClientId: '213748404792-frc97evo89g9a0fiq6aq1bj8d4sph3a6.apps.googleusercontent.com',
     iosBundleId: 'com.bakchodi.chatApplication',
   );
 

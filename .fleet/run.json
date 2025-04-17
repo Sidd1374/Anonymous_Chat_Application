@@ -1,0 +1,10 @@
+{
+  "configurations": [
+    {
+      "name": "Run Flutter Release",
+      "type": "command",
+      "program": "pwsh",
+      "args": ["-Command", "flutter run"]
+    }
+  ]
+}

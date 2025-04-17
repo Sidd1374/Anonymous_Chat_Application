@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:veil_chat_application/components/button.dart';
-import 'package:veil_chat_application/components/chat_actions_bar.dart';
-import 'package:veil_chat_application/components/input_field.dart';
-import 'package:veil_chat_application/components/toggle_button.dart';
+import 'package:veil_chat_application/widgets/button.dart';
+import 'package:veil_chat_application/widgets/chat_actions_bar.dart';
+import 'package:veil_chat_application/widgets/input_field.dart';
+import 'package:veil_chat_application/widgets/toggle_button.dart';
 
 class ComponentTest extends StatelessWidget {
   const ComponentTest({super.key});

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:lottie/lottie.dart';
+import 'package:veil_chat_application/widgets/button.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -10,26 +10,26 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(height: 120.h),
+
             Text(
               "Ready For Some Anonymous Fun ?",
               style: Theme.of(context).textTheme.bodyLarge,
             ),
-            SizedBox(height: 20.h),
-            Lottie.asset(
-              'assets/animation/Animation - 1738660125425.lottie',
-              height: 200.0,
-              repeat: true,
-              reverse: true,
-              animate: true,
+
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 60),
+              child: Lottie.asset('assets/animation/ani-1.json'),
             ),
-            SizedBox(height: 80.h),
-            ElevatedButton(
-                onPressed: () {
-                  print('Button Pressed');
-                },
-                child: Text("Find Someone")),
+
+            AppButton(
+              isPrimary: true,
+              isEnabled: true,
+              onPressed: () => {},
+              text: "Let's Go"
+            )
+
           ],
         ),
       ),

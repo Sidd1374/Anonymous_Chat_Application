@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-// import 'package:lottie/lottie.dart';
-import 'login_page.dart';
+import 'package:lottie/lottie.dart';
+import 'package:veil_chat_application/core/constants.dart';
+import 'package:veil_chat_application/widgets/button.dart';
 
 class EntryPage extends StatelessWidget {
   final double buttonWidth;
   final double borderRadius;
 
-  const EntryPage({super.key, 
+  const EntryPage({
+    super.key,
     this.buttonWidth = 150.0,
     this.borderRadius = 15,
   });
@@ -14,45 +16,35 @@ class EntryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Center(
-          //   child: AspectRatio(
-          //     aspectRatio: 1.2,
-          //     child: Lottie.asset(
-          //       'assets/animation/home_animation_1735286422424.json',
-          //       fit: BoxFit.scaleDown,
-          //     ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 60),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+
+          spacing: 30,
           
-          //   ),
-          // ),
-
-          Center(
-            child: Image.asset(
-              'assets/animations/Animation - 1735759321649.gif',
-              height: 300,
-              width: 300,
-              fit: BoxFit.contain,
+          children: [
+            Text(
+              TextConstants.appName,
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.only(top: 20.0),
-            child: SizedBox(
-              width: buttonWidth,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
-                  );
-                },
-                child: const Text("Continue"),
-              ),
+        
+            Lottie.asset("assets/animation/ani-1.json"),
+        
+            Text(
+              TextConstants.welcomeText,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+        
+            AppButton(
+                isPrimary: true,
+                isEnabled: true,
+                onPressed: () => {},
+                text: "Continue")
+          ],
+        ),
       ),
     );
   }

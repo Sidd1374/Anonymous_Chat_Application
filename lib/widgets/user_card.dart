@@ -21,14 +21,9 @@ class HorizontalUserCard extends StatelessWidget {
         foregroundColor: Theme.of(context).textTheme.bodySmall?.color
       ),
 
-
       child: Row(
-
-
         children: [
-
           
-
         ],
       )
     );

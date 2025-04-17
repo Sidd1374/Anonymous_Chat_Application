@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../components/colors.dart'; // Make sure this file defines LightColors and DarkColors
+import 'colors.dart'; // Make sure this file defines LightColors and DarkColors
 
 class AppTheme extends ChangeNotifier {
   // === Theme Colors ===
