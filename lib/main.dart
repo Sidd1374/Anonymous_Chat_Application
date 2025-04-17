@@ -4,7 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 // import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:veil_chat_application/widgets/component_test.dart';
+import 'package:veil_chat_application/views/entry/welcome.dart';
+import 'package:veil_chat_application/views/home/homepage.dart';
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
 
@@ -68,8 +69,7 @@ class MyApp extends StatelessWidget {
                     title: 'ChatApp',
                     theme: appTheme.currentTheme,
 
-                    // home: isFirstRun ? EntryPage() : HomePage()
-                    home: ComponentTest(),
+                    home: isFirstRun ? Welcome() : FriendsList()
                   );
                 },
               );

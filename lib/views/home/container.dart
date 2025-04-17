@@ -3,10 +3,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 
-import 'home_page.dart';
-import '../entry/login_page.dart';
-import 'friends_page.dart';
-import 'history_page.dart';
+import 'homepage.dart';
+import '../entry/login.dart';
+import 'friends_list.dart';
+import 'history.dart';
 // import '../../views/test_1.dart';
 
 class HomePageFrame extends StatefulWidget {
@@ -20,9 +20,9 @@ class _HomePageFrameState extends State<HomePageFrame> {
   int _selectedIndex = 0;
 
   static final List<Widget> _widgetOptions = <Widget>[
-    HomePage(),
+    FriendsList(),
     FriendsPage(),
-    HistoryPage(),
+    History(),
   ];
 
   void _onItemTapped(int index) {
@@ -59,7 +59,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  MaterialPageRoute(builder: (context) => const Login()),
                 );
               },
               icon: const Icon(Icons.account_circle_outlined),

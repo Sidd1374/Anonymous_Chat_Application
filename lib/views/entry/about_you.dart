@@ -1,4 +1,4 @@
-import 'package:veil_chat_application/views/entry/about_card_page.dart';
+import 'package:veil_chat_application/views/entry/profile_created.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,14 +6,14 @@ import 'dart:io';
 
 // import '../home/home_test.dart';
 
-class About extends StatefulWidget {
-  const About({super.key});
+class AboutYou extends StatefulWidget {
+  const AboutYou({super.key});
 
   @override
-  State<About> createState() => _AboutState();
+  State<AboutYou> createState() => _AboutYouState();
 }
 
-class _AboutState extends State<About> {
+class _AboutYouState extends State<AboutYou> {
   File? _profileImage;
   final TextEditingController _nameController = TextEditingController();
   String _selectedGender = 'Select a gender';
@@ -212,7 +212,7 @@ class _AboutState extends State<About> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AboutCardScreen(
+            builder: (context) => ProfileCreated(
               profileImage: _profileImage,
               name: _nameController.text.isNotEmpty
                   ? _nameController.text

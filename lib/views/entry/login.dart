@@ -4,17 +4,17 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/app_theme.dart';
-import 'register_page.dart';
-import 'About_page.dart';
+import 'register.dart';
+import 'about_you.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class Login extends StatefulWidget {
+  const Login({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  _LoginState createState() => _LoginState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   final TextEditingController emailController = TextEditingController();
@@ -250,14 +250,14 @@ class _LoginPageState extends State<LoginPage> {
   void _navigateToHome(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => About()),
+      MaterialPageRoute(builder: (context) => AboutYou()),
     );
   }
 
   void _navigateToRegister(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RegisterPage()),
+      MaterialPageRoute(builder: (context) => Register()),
     );
   }
 

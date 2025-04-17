@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:io';
 
-import '../home/home_page_frame.dart';
-import 'level_two_verification_page.dart';
+import '../home/container.dart';
+import 'aadhaar_verification.dart';
 // import '../home/home_test.dart';
 
-class AboutCardScreen extends StatelessWidget {
+class ProfileCreated extends StatelessWidget {
   final File? profileImage;
   final String name;
   final String gender;
   final String age;
 
-  const AboutCardScreen({
+  const ProfileCreated({
     super.key,
     required this.profileImage,
     required this.name,

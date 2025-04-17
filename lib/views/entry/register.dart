@@ -1,18 +1,18 @@
-import 'package:veil_chat_application/views/home/home_page_frame.dart';
+import 'package:veil_chat_application/views/home/container.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/app_theme.dart';
-import 'login_page.dart';
+import 'login.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class Register extends StatefulWidget {
+  const Register({super.key});
 
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  _RegisterState createState() => _RegisterState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterState extends State<Register> {
   final _formKey = GlobalKey<FormState>();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
@@ -266,7 +266,7 @@ class _RegisterPageState extends State<RegisterPage> {
   void _navigateToLogin(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LoginPage()),
+      MaterialPageRoute(builder: (context) => Login()),
     );
   }
 

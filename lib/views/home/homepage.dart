@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:veil_chat_application/widgets/button.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class FriendsList extends StatelessWidget {
+  const FriendsList({super.key});
 
   @override
   Widget build(BuildContext context) {

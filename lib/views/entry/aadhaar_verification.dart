@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../home/home_page_frame.dart';
+import 'package:veil_chat_application/routes/routes.dart';
 
-class LevelTwoPage extends StatelessWidget {
+class AadhaarVerification extends StatelessWidget {
   final TextEditingController _aadhaarController = TextEditingController();
 
-  LevelTwoPage({super.key});
+  AadhaarVerification({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +42,7 @@ class LevelTwoPage extends StatelessWidget {
     return Text(
       'Verification 2.0',
       textAlign: TextAlign.center,
-      style:
-          theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w600),
+      style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 
@@ -62,24 +61,23 @@ class LevelTwoPage extends StatelessWidget {
             WidgetSpan(
               alignment: PlaceholderAlignment.middle,
               child: TextButton(
-              onPressed: () {
-                // Add your privacy terms navigation logic here
-              },
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero, // Remove extra padding
-                minimumSize: Size.zero, // Remove minimum size
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap, // Shrink tap area
-              ),
-              child: Text(
-                'Privacy Terms',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.primaryColor,
+                onPressed: () {
+                  // TODO: Add privacy terms navigation if needed
+                },
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Privacy Terms',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.primaryColor,
+                  ),
                 ),
               ),
-              ),
             ),
-            
             TextSpan(
               text: '.',
               style: theme.textTheme.bodyMedium,
@@ -105,11 +103,10 @@ class LevelTwoPage extends StatelessWidget {
             TextSpan(
               text: 'AADHAAR',
               style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: theme.primaryColor, // Add desired color here
+                fontWeight: FontWeight.w600,
+                color: theme.primaryColor,
               ),
             ),
-        
             TextSpan(
               text: ' number below.',
               style: theme.textTheme.bodyMedium,
@@ -125,10 +122,7 @@ class LevelTwoPage extends StatelessWidget {
     final theme = Theme.of(context);
     return ElevatedButton(
       onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => HomePageFrame()),
-        );
+        Navigator.pushNamed(context, AppRoutes.homepage);
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: theme.primaryColor,
@@ -163,11 +157,11 @@ class LevelTwoPage extends StatelessWidget {
   Widget _buildAadhaarInput(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: 300.w, // Slightly larger than the input field for border effect
-      height: 52.h, // Slightly larger than the input field for border effect
+      width: 300.w,
+      height: 52.h,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface, // Match input field background color
-        borderRadius: BorderRadius.circular(12.r), // Slightly larger radius
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12.r),
       ),
       child: Container(
         width: 324.w,
@@ -205,7 +199,7 @@ class LevelTwoPage extends StatelessWidget {
               borderSide: BorderSide.none,
               borderRadius: BorderRadius.circular(10.r),
             ),
-            fillColor: theme.colorScheme.surface, // Updated background color
+            fillColor: theme.colorScheme.surface,
             filled: true,
           ),
           textAlign: TextAlign.center,

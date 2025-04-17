@@ -3,11 +3,11 @@ import 'package:lottie/lottie.dart';
 import 'package:veil_chat_application/core/constants.dart';
 import 'package:veil_chat_application/widgets/button.dart';
 
-class EntryPage extends StatelessWidget {
+class Welcome extends StatelessWidget {
   final double buttonWidth;
   final double borderRadius;
 
-  const EntryPage({
+  const Welcome({
     super.key,
     this.buttonWidth = 150.0,
     this.borderRadius = 15,
