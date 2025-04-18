@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "213748404792-r6q567c2c19pbktu6d5artm5i9nhmpij.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bakchodi.chat_application",
+            "certificate_hash": "a90280568d7a3503ff7de84d6fa29ed23a921919"
+          }
+        },
+        {
           "client_id": "213748404792-notissn77ktp7st6jl34q0te4s4fro1c.apps.googleusercontent.com",
           "client_type": 3
         }

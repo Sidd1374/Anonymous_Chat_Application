@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/app_theme.dart';
 import 'register.dart';
@@ -167,8 +168,31 @@ class _LoginState extends State<Login> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              print('Forgot Password Pressed');
+                            onPressed: () async {
+                              if (emailController.text.isEmpty) {
+                                _showErrorDialog(
+                                    "Please enter your email to reset the password.");
+                                return;
+                              }
+
+                              try {
+                                await FirebaseAuth.instance
+                                    .sendPasswordResetEmail(
+                                  email: emailController.text.trim(),
+                                );
+                                _showSuccessDialog(
+                                    "Password reset email sent! Check your inbox.");
+                              } on FirebaseAuthException catch (e) {
+                                String message =
+                                    "Failed to send password reset email.";
+                                if (e.code == 'user-not-found') {
+                                  message = "No user found with this email.";
+                                }
+                                _showErrorDialog1(message);
+                              } catch (e) {
+                                _showErrorDialog1(
+                                    "Something went wrong. Please try again.");
+                              }
                             },
                             child: Text(
                               "Forgot Password?",
@@ -216,8 +240,42 @@ class _LoginState extends State<Login> {
                               ),
                             ),
                             OutlinedButton(
-                              onPressed: () {
-                                print('Continue with Google');
+                              onPressed: () async {
+                                try {
+                                  // Trigger Google Sign-In
+                                  final GoogleSignInAccount? googleUser =
+                                      await GoogleSignIn().signIn();
+
+                                  if (googleUser == null) {
+                                    // The user canceled the sign-in
+                                    return;
+                                  }
+
+                                  // Obtain the Google Sign-In authentication details
+                                  final GoogleSignInAuthentication googleAuth =
+                                      await googleUser.authentication;
+
+                                  // Create a new credential for Firebase
+                                  final credential =
+                                      GoogleAuthProvider.credential(
+                                    accessToken: googleAuth.accessToken,
+                                    idToken: googleAuth.idToken,
+                                  );
+
+                                  // Sign in to Firebase with the Google credential
+                                  await FirebaseAuth.instance
+                                      .signInWithCredential(credential);
+
+                                  // Navigate to the home page after successful login
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => AboutYou()),
+                                  );
+                                } catch (e) {
+                                  _showErrorDialog(
+                                      "Google Sign-In failed. Please try again.");
+                                }
                               },
                               style: AppTheme.outlinedButtonStyle(context),
                               child: Image.asset(
@@ -291,6 +349,38 @@ class _LoginState extends State<Login> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Login Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog1(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Success'),
         content: Text(message),
         actions: [
           TextButton(

@@ -7,6 +7,7 @@ import 'homepage.dart';
 import '../entry/login.dart';
 import 'friends_list.dart';
 import 'history.dart';
+import 'profile.dart';
 // import '../../views/test_1.dart';
 
 class HomePageFrame extends StatefulWidget {
@@ -49,17 +50,17 @@ class _HomePageFrameState extends State<HomePageFrame> {
                   width: 35,
                 ),
                 const SizedBox(width: 10),
-                // Text(
-                //   "VEIL",
-                //   style: Theme.of(context).appBarTheme.titleTextStyle,
-                // ),
+                Text(
+                  "VEIL",
+                  style: Theme.of(context).appBarTheme.titleTextStyle,
+                ),
               ],
             ),
             IconButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const Login()),
+                  MaterialPageRoute(builder: (context) => ProfileLvl1()),
                 );
               },
               icon: const Icon(Icons.account_circle_outlined),

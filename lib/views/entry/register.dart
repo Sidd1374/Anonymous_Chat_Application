@@ -2,6 +2,8 @@ import 'package:veil_chat_application/views/home/container.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/app_theme.dart';
 import 'login.dart';
 
@@ -17,6 +19,11 @@ class _RegisterState extends State<Register> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   bool _isChecked = false;
+
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +82,7 @@ class _RegisterState extends State<Register> {
                 SizedBox(
                   width: 350.w,
                   child: TextFormField(
+                    controller: emailController,
                     decoration: AppTheme.textFieldDecoration(
                       context,
                       label: "Email",
@@ -95,6 +103,7 @@ class _RegisterState extends State<Register> {
                 SizedBox(
                   width: 350.w,
                   child: TextFormField(
+                    controller: passwordController,
                     obscureText: !_isPasswordVisible,
                     decoration: AppTheme.textFieldDecoration(
                       context,
@@ -126,6 +135,7 @@ class _RegisterState extends State<Register> {
                 SizedBox(
                   width: 350.w,
                   child: TextFormField(
+                    controller: confirmPasswordController,
                     obscureText: !_isConfirmPasswordVisible,
                     decoration: AppTheme.textFieldDecoration(
                       context,
@@ -204,8 +214,58 @@ class _RegisterState extends State<Register> {
                 ),
                 SizedBox(height: 10.h),
                 ElevatedButton(
-                  onPressed: () {
-                    showCodeInputDialog(context);
+                  onPressed: () async {
+                    if (!_formKey.currentState!.validate()) {
+                      // If form validation fails, return early
+                      return;
+                    }
+
+                    if (!_isChecked) {
+                      _showErrorDialog(
+                          "You must agree to the Terms & Conditions to proceed.");
+                      return;
+                    }
+
+                    final email = emailController.text.trim();
+                    final password = passwordController.text.trim();
+                    final confirmPassword =
+                        confirmPasswordController.text.trim();
+
+                    if (password != confirmPassword) {
+                      _showErrorDialog(
+                          "Password and Confirm Password do not match.");
+                      return;
+                    }
+
+                    try {
+                      // Firebase Authentication logic to register the user
+                      await FirebaseAuth.instance
+                          .createUserWithEmailAndPassword(
+                        email: email,
+                        password: password,
+                      );
+
+                      // Navigate to the next page after successful registration
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => HomePageFrame()),
+                      );
+                    } on FirebaseAuthException catch (e) {
+                      String errorMessage =
+                          "Registration failed. Please try again.";
+                      if (e.code == 'email-already-in-use') {
+                        errorMessage = "This email is already in use.";
+                      } else if (e.code == 'weak-password') {
+                        errorMessage = "The password is too weak.";
+                      } else if (e.code == 'invalid-email') {
+                        errorMessage = "The email address is invalid.";
+                      }
+                      _showErrorDialog(errorMessage);
+                    } catch (e) {
+                      _showErrorDialog(
+                          "An unexpected error occurred. Please try again.");
+                    }
                   },
                   style: AppTheme.elevatedButtonStyle(context),
                   child: const Text("Sign Up"),
@@ -242,8 +302,42 @@ class _RegisterState extends State<Register> {
                       ),
                     ),
                     OutlinedButton(
-                      onPressed: () {
-                        print('Continue with Google');
+                      onPressed: () async {
+                        try {
+                          print("Google Sign-In started");
+                          final GoogleSignInAccount? googleUser =
+                              await GoogleSignIn().signIn();
+                          print("Google User: $googleUser");
+
+                          if (googleUser == null) {
+                            // The user canceled the sign-in
+                            return;
+                          }
+
+                          // Obtain the Google Sign-In authentication details
+                          final GoogleSignInAuthentication googleAuth =
+                              await googleUser.authentication;
+
+                          // Create a new credential for Firebase
+                          final credential = GoogleAuthProvider.credential(
+                            accessToken: googleAuth.accessToken,
+                            idToken: googleAuth.idToken,
+                          );
+
+                          // Sign in to Firebase with the Google credential
+                          await FirebaseAuth.instance
+                              .signInWithCredential(credential);
+
+                          // Navigate to the home page after successful sign-in
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => HomePageFrame()),
+                          );
+                        } catch (e) {
+                          _showErrorDialog(
+                              "Google Sign-In failed. Please try again.");
+                        }
                       },
                       style: AppTheme.outlinedButtonStyle(context),
                       child: Image.asset(
@@ -326,6 +420,26 @@ class _RegisterState extends State<Register> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Error"),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
         );
       },
     );
