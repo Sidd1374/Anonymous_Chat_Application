@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 
 import 'homepage.dart';
-import '../entry/login.dart';
 import 'friends_list.dart';
 import 'history.dart';
 import 'profile.dart';

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ProfileLvl1 extends StatefulWidget {
+  const ProfileLvl1({super.key});
+
   @override
   _ProfileLvl1State createState() => _ProfileLvl1State();
 }
@@ -101,8 +103,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           width: 2,
                         ),
                         image: const DecorationImage(
-                          image:
-                              NetworkImage("https://via.placeholder.com/150"),
+                          image: AssetImage('assets/Profile_image.png'),
                           fit: BoxFit.cover,
                         ),
                       ),

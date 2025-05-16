@@ -6,23 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/entry/register.dart';
 import 'package:veil_chat_application/views/entry/login.dart';
-import 'package:veil_chat_application/views/entry/verify_otp.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
-import 'package:veil_chat_application/views/entry/face_verification.dart';
-import 'package:veil_chat_application/views/entry/profile_created.dart';
-import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
-import 'package:veil_chat_application/views/entry/aadhaar_verification_waiting.dart';
 
 // Main pages
 import 'package:veil_chat_application/views/home/container.dart';
-import 'package:veil_chat_application/views/home/friends_list.dart';
 import 'package:veil_chat_application/views/home/history.dart';
-import 'package:veil_chat_application/views/home/chat_options.dart';
 import 'package:veil_chat_application/views/home/homepage.dart';
-import 'package:veil_chat_application/views/home/searching_chat.dart';
-import 'package:veil_chat_application/views/home/chat_area.dart';
-import 'package:veil_chat_application/views/home/settings.dart';
-import 'package:veil_chat_application/views/home/profile.dart';
 
 class AppRoutes {
   // Entry routes
