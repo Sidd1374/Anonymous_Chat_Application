@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// import 'package:provider/provider.dart';
+// import '../../core/app_theme.dart';
+import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 
 class ProfileLvl1 extends StatefulWidget {
   const ProfileLvl1({super.key});
@@ -71,6 +74,15 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         iconTheme: theme.appBarTheme.iconTheme,
         titleTextStyle: theme.appBarTheme.titleTextStyle,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              // Add navigation to settings page
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+        ],
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -174,6 +186,11 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                     ElevatedButton(
                       onPressed: () {
                         // Add navigation or verification logic here
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AadhaarVerification(),
+                            ));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.primaryColor,

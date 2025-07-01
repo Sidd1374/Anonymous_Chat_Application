@@ -20,7 +20,7 @@ class AppTheme extends ChangeNotifier {
     appBarTheme: const AppBarTheme(
       backgroundColor: LightColors.background,
       iconTheme: IconThemeData(color: LightColors.primary),
-      titleTextStyle: TextStyle(color: LightColors.textAlt, fontSize: 20),
+      titleTextStyle: TextStyle(color: LightColors.text, fontSize: 20),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,

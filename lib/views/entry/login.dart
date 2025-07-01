@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/app_theme.dart';
 import 'register.dart';
 import 'about_you.dart';
+import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -206,6 +209,7 @@ class _LoginState extends State<Login> {
                         SizedBox(height: isPortrait ? 30.h : 20.h),
                         ElevatedButton(
                           onPressed: _loginUser,
+                          // onPressed: ,
                           style: AppTheme.elevatedButtonStyle(context),
                           child: Text(
                             "Continue",
@@ -327,6 +331,17 @@ class _LoginState extends State<Login> {
 
         UserCredential userCredential = await FirebaseAuth.instance
             .signInWithEmailAndPassword(email: email, password: password);
+
+        // Save user data to SharedPreferences or any other storage if needed
+        // If you want to save user data, implement the saveToPrefs method in your User class.
+        // Example:
+        final user = mymodel.User(
+          email: email,
+          fullName: '',
+          password: password,
+          profilePic: '',
+        );
+        await mymodel.User.saveToPrefs(user);
 
         print("User logged in: ${userCredential.user?.uid}");
         _navigateToHome(context);

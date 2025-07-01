@@ -20,7 +20,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
   int _selectedIndex = 0;
 
   static final List<Widget> _widgetOptions = <Widget>[
-    FriendsList(),
+    HomePage(),
     FriendsPage(),
     History(),
   ];

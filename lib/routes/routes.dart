@@ -12,6 +12,8 @@ import 'package:veil_chat_application/views/entry/about_you.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 import 'package:veil_chat_application/views/home/history.dart';
 import 'package:veil_chat_application/views/home/homepage.dart';
+import '../views/home/settings.dart';
+import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 
 class AppRoutes {
   // Entry routes
@@ -45,18 +47,18 @@ class AppRoutes {
         aboutYou: (context) => const AboutYou(),
         // faceVerification: (context) => const FaceVerification(),
         // profileCreated: (context) => const ProfileCreated(),
-        // aadhaarVerification: (context) => const AadhaarVerification(),
+        aadhaarVerification: (context) => AadhaarVerification(),
         // aadhaarVerificationWaiting: (context) =>
         //     const AadhaarVerificationWaiting(),
 
         // Main pages
         homepage: (context) => const HomePageFrame(),
-        friendsList: (context) => const FriendsList(),
+        friendsList: (context) => const HomePage(),
         history: (context) => const History(),
         // chatOptions: (context) => const ChatOptions(),
         // searchingChat: (context) => const SearchingChat(),
         // chatArea: (context) => const ChatArea(),
-        // settings: (context) => const Settings(),
+        settings: (context) => const SettingsPage(),
         // profile: (context) => const Profile(),
       };
 }
