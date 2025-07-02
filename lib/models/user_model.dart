@@ -61,4 +61,26 @@ class User {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_data');
   }
+
+  // Save name, age, and gender to SharedPreferences
+  static Future<void> saveProfileDetails({
+    required String fullName,
+    required String gender,
+    required String age,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_fullName', fullName);
+    await prefs.setString('user_gender', gender);
+    await prefs.setString('user_age', age);
+  }
+
+  // Retrieve name, age, and gender from SharedPreferences
+  static Future<Map<String, String?>> getProfileDetails() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'fullName': prefs.getString('user_fullName'),
+      'gender': prefs.getString('user_gender'),
+      'age': prefs.getString('user_age'),
+    };
+  }
 }

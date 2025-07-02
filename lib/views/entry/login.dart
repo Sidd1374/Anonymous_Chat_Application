@@ -339,7 +339,6 @@ class _LoginState extends State<Login> {
           email: email,
           fullName: '',
           password: password,
-          profilePic: '',
         );
         await mymodel.User.saveToPrefs(user);
 

@@ -48,6 +48,7 @@ dependencies:
   shared_preferences: ^2.5.3
   google_sign_in: ^6.3.0
   device_preview: ^1.2.0
+  path_provider: ^2.1.5
 
 
 dev_dependencies:

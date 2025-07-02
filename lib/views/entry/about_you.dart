@@ -1,8 +1,12 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/entry/profile_created.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:veil_chat_application/models/user_model.dart' as mymodel;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 // import '../home/home_test.dart';
 
@@ -28,6 +32,18 @@ class _AboutYouState extends State<AboutYou> {
         _profileImage = File(pickedFile.path);
       });
     }
+  }
+
+  Future<String?> _saveProfileImageLocally(File? imageFile) async {
+    if (imageFile == null) return null;
+    final appDir = await getApplicationDocumentsDirectory();
+    final userDir = Directory('${appDir.path}/Assets/User');
+    if (!await userDir.exists()) {
+      await userDir.create(recursive: true);
+    }
+    final fileName = path.basename(imageFile.path);
+    final savedImage = await imageFile.copy('${userDir.path}/$fileName');
+    return savedImage.path;
   }
 
   @override
@@ -208,7 +224,25 @@ class _AboutYouState extends State<AboutYou> {
     final theme = Theme.of(context);
 
     return ElevatedButton(
-      onPressed: () {
+      onPressed: () async {
+        // Save name, gender, and age to SharedPreferences
+        await mymodel.User.saveProfileDetails(
+          fullName: _nameController.text.isNotEmpty
+              ? _nameController.text
+              : 'John Doe',
+          gender:
+              _selectedGender != 'Select a gender' ? _selectedGender : 'Male',
+          age: _ageController.text.isNotEmpty ? _ageController.text : '20',
+        );
+
+        // Save profile image locally and store path in SharedPreferences
+        String? imagePath;
+        if (_profileImage != null) {
+          imagePath = await _saveProfileImageLocally(_profileImage);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('profile_image_path', imagePath ?? '');
+        }
+
         Navigator.push(
           context,
           MaterialPageRoute(

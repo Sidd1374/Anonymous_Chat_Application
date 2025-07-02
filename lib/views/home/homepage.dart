@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:veil_chat_application/views/home/settings.dart';
 import 'package:veil_chat_application/widgets/button.dart';
 
 class HomePage extends StatelessWidget {
@@ -23,7 +24,12 @@ class HomePage extends StatelessWidget {
             AppButton(
                 isPrimary: true,
                 isEnabled: true,
-                onPressed: () => {},
+                onPressed: () => {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SettingsPage()))
+                    },
                 text: "Let's Go")
           ],
         ),

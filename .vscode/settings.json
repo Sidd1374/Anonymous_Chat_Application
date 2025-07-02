@@ -1,3 +1,7 @@
 {
-    "cmake.sourceDirectory": "D:/projects/Chat_Application/windows"
+    "cmake.sourceDirectory": "D:/projects/Chat_Application/windows",
+    // .vscode/settings.json or user settings
+    "files.autoSave": "afterDelay",
+    "dart.flutterHotReloadOnSave": "allIfDirty"
+
 }

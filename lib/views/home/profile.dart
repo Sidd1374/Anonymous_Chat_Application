@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-// import '../../core/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 
 class ProfileLvl1 extends StatefulWidget {
@@ -19,6 +20,29 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     'Photography',
     'Graphic Designing',
   ];
+
+  String _name = '';
+  String _gender = '';
+  int _age = 0;
+  String? _profileImagePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    mymodel.User.getProfileDetails().then((user) {
+      setState(() {
+        _name = user['fullName'] ?? '';
+        _gender = user['gender'] ?? '';
+        _age = int.tryParse(user['age'] ?? '0') ?? 0;
+        _profileImagePath = prefs.getString('profile_image_path');
+      });
+    });
+  }
 
   void _addInterest(String interest) {
     setState(() {
@@ -78,7 +102,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              // Add navigation to settings page
               Navigator.pushNamed(context, '/settings');
             },
           ),
@@ -114,35 +137,41 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           color: theme.primaryColor,
                           width: 2,
                         ),
-                        image: const DecorationImage(
-                          image: AssetImage('assets/Profile_image.png'),
-                          fit: BoxFit.cover,
-                        ),
+                        image: _profileImagePath != null &&
+                                _profileImagePath!.isNotEmpty &&
+                                File(_profileImagePath!).existsSync()
+                            ? DecorationImage(
+                                image: FileImage(File(_profileImagePath!)),
+                                fit: BoxFit.cover,
+                              )
+                            : const DecorationImage(
+                                image: AssetImage('assets/Profile_image.png'),
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
                     const SizedBox(height: 20),
                     // User Information
                     Text(
-                      'John Doe',
+                      _name.isNotEmpty ? _name : 'Name not set',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Male',
+                      _gender.isNotEmpty ? _gender : 'Gender not set',
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      'Age: 28',
+                      _age > 0 ? 'Age: $_age' : 'Age not set',
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 30),
                     // Interests Section
                     Wrap(
-                      alignment:
-                          WrapAlignment.center, // Align interests in the center
+                      alignment: WrapAlignment.center,
                       spacing: 10,
                       runSpacing: 10,
                       children: _interests
@@ -185,7 +214,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                     // Verify Button
                     ElevatedButton(
                       onPressed: () {
-                        // Add navigation or verification logic here
                         Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -220,7 +248,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     );
   }
 
-  // Helper method to build interest tags
   Widget _buildInterestTag(String interest, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
