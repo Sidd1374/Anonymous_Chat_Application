@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:veil_chat_application/models/user_model.dart' as mymodel;
+import 'package:provider/provider.dart';
+import '../../routes/routes.dart';
+// import 'package:veil_chat_application/models/user_model.dart' as mymodel;
+import 'package:veil_chat_application/core/app_theme.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -16,11 +19,24 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appTheme = context.watch<AppTheme>();
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Settings'),
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        actions: [
+          IconButton(
+            icon: Icon(
+              appTheme.currentTheme == AppTheme.lightTheme
+                  ? Icons.dark_mode
+                  : Icons.light_mode,
+              color: Theme.of(context).iconTheme.color,
+            ),
+            onPressed: appTheme.toggleTheme,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Container(
@@ -45,45 +61,48 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
               // the age range selection
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14.0),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Chat only with people of age ',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    SizedBox(
-                      width: 50,
-                      child: TextField(
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: 'Min',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        ),
-                        onChanged: (value) {
-                          // handle min age change
-                        },
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14.0),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Chat only with people of age ',
+                        style: TextStyle(fontSize: 16),
                       ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text('to'),
-                    ),
-                    SizedBox(
-                      width: 50,
-                      child: TextField(
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: 'Max',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                      SizedBox(
+                        width: 50,
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Min',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onChanged: (value) {
+                            // handle min age change
+                          },
                         ),
-                        onChanged: (value) {
-                          // handle max age change
-                        },
                       ),
-                    ),
-                  ],
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text('to'),
+                      ),
+                      SizedBox(
+                        width: 50,
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: 'Max',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onChanged: (value) {
+                            // handle max age change
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               // the switch for showing profile photo to strangers and friends
