@@ -58,7 +58,7 @@ class AppRoutes {
         // chatOptions: (context) => const ChatOptions(),
         // searchingChat: (context) => const SearchingChat(),
         // chatArea: (context) => const ChatArea(),
-        settings: (context) => const SettingsPage(),
+        settings: (context) => SettingsPage(),
         // profile: (context) => const Profile(),
       };
 }

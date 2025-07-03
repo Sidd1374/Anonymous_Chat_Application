@@ -75,7 +75,7 @@ class MyApp extends StatelessWidget {
                     // useInheritedMediaQuery: true,
 
                     // home: isLoggedIn ? HomePageFrame() : Welcome(),
-                    home: Welcome(),
+                    home: HomePageFrame(),
                   );
                 },
               );

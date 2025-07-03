@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'homepage.dart';
 import 'friends_list.dart';
@@ -62,7 +63,9 @@ class _HomePageFrameState extends State<HomePageFrame> {
                   MaterialPageRoute(builder: (context) => ProfileLvl1()),
                 );
               },
-              icon: const Icon(Icons.account_circle_outlined),
+              icon: SvgPicture.asset(
+                'assets/icons/icon_menu.svg',
+              ),
             ),
           ],
         ),
@@ -73,12 +76,11 @@ class _HomePageFrameState extends State<HomePageFrame> {
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Container(
-            height: kBottomNavigationBarHeight + 10.h, // Adjusted height
+            height: kBottomNavigationBarHeight + 10.h,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
-              borderRadius:
-                  BorderRadius.circular(18.r), // Fully rounded container
+              color: Colors.transparent, // Set background to transparent
+              borderRadius: BorderRadius.circular(18.r),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.2),
@@ -88,7 +90,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(18.r), // Match outer radius
+              borderRadius: BorderRadius.circular(18.r),
               child: NavigationBar(
                 height: kBottomNavigationBarHeight + 5.h,
                 selectedIndex: _selectedIndex,
@@ -98,8 +100,9 @@ class _HomePageFrameState extends State<HomePageFrame> {
                 indicatorColor: Theme.of(context)
                     .bottomNavigationBarTheme
                     .selectedItemColor,
-                backgroundColor:
-                    Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .primary, // Keep buttons' bg as primary color
                 destinations: <Widget>[
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined,

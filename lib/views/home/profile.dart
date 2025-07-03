@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
+import '../../routes/routes.dart' as route;
 
 class ProfileLvl1 extends StatefulWidget {
   const ProfileLvl1({super.key});
@@ -101,9 +102,8 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.pushNamed(context, '/settings');
-            },
+            onPressed: () =>
+                Navigator.pushNamed(context, route.AppRoutes.settings),
           ),
         ],
       ),
