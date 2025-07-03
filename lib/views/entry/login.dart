@@ -27,6 +27,8 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     final appTheme = context.watch<AppTheme>();
+    final size = MediaQuery.of(context).size;
+    final isWide = size.width > 600;
 
     return WillPopScope(
       onWillPop: () async {
@@ -55,14 +57,10 @@ class _LoginState extends State<Login> {
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Image.asset(
-                    appTheme.currentLogoPath,
-                    height: 25.sp,
-                    width: 30.sp,
-                  ),
-                ],
+              Image.asset(
+                appTheme.currentLogoPath,
+                height: 30,
+                width: 36,
               ),
               IconButton(
                 icon: Icon(
@@ -76,227 +74,233 @@ class _LoginState extends State<Login> {
             ],
           ),
         ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isPortrait = constraints.maxHeight > constraints.maxWidth;
-
-            return SingleChildScrollView(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0.w),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(height: isPortrait ? 80.h : 40.h),
-                        Image.asset(
-                          appTheme.currentLogoPath,
-                          height: isPortrait ? 80.sp : 60.sp,
-                          width: isPortrait ? 80.sp : 60.sp,
-                        ),
-                        SizedBox(height: isPortrait ? 20.h : 10.h),
-                        Text(
-                          "Welcome!",
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: isPortrait ? 28.sp : 20.sp,
-                                  ),
-                        ),
-                        SizedBox(height: isPortrait ? 10.h : 5.h),
-                        Text(
-                          "Sign in to your account",
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        SizedBox(height: isPortrait ? 40.h : 20.h),
-                        SizedBox(
-                          width: isPortrait ? 350.w : 300.w,
-                          height: 50.h,
-                          child: TextFormField(
-                            controller: emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: AppTheme.textFieldDecoration(
-                              context,
-                              label: "Email",
-                              prefixIcon: Icons.email,
+        body: Center(
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isWide ? 400 : 800,
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWide ? 32 : 16,
+                  vertical: isWide ? 32 : 16,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(height: 24),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Center(
+                            child: Image.asset(
+                              appTheme.currentLogoPath,
+                              height: 100,
+                              width: 100,
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                  .hasMatch(value)) {
-                                return 'Enter a valid email';
-                              }
-                              return null;
-                            },
                           ),
-                        ),
-                        SizedBox(height: 10.h),
-                        SizedBox(
-                          width: isPortrait ? 350.w : 300.w,
-                          height: 50.h,
-                          child: TextFormField(
-                            obscureText: !_isPasswordVisible,
-                            controller: passwordController,
-                            keyboardType: TextInputType.visiblePassword,
-                            decoration: AppTheme.textFieldDecoration(
-                              context,
-                              label: "Password",
-                              prefixIcon: Icons.lock,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _isPasswordVisible
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isPasswordVisible = !_isPasswordVisible;
-                                  });
-                                },
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your password';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () async {
-                              if (emailController.text.isEmpty) {
-                                _showErrorDialog(
-                                    "Please enter your email to reset the password.");
-                                return;
-                              }
-
-                              try {
-                                await FirebaseAuth.instance
-                                    .sendPasswordResetEmail(
-                                  email: emailController.text.trim(),
-                                );
-                                _showSuccessDialog(
-                                    "Password reset email sent! Check your inbox.");
-                              } on FirebaseAuthException catch (e) {
-                                String message =
-                                    "Failed to send password reset email.";
-                                if (e.code == 'user-not-found') {
-                                  message = "No user found with this email.";
-                                }
-                                _showErrorDialog1(message);
-                              } catch (e) {
-                                _showErrorDialog1(
-                                    "Something went wrong. Please try again.");
-                              }
-                            },
+                          const SizedBox(height: 16),
+                          Center(
                             child: Text(
-                              "Forgot Password?",
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Theme.of(context).primaryColor,
-                              ),
+                              "Welcome!",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 28,
+                                  ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Text(
+                              "Sign in to your account",
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                      TextFormField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: AppTheme.textFieldDecoration(
+                          context,
+                          label: "Email",
+                          prefixIcon: Icons.email,
                         ),
-                        SizedBox(height: isPortrait ? 30.h : 20.h),
-                        ElevatedButton(
-                          onPressed: _loginUser,
-                          // onPressed: ,
-                          style: AppTheme.elevatedButtonStyle(context),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                            return 'Enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      TextFormField(
+                        obscureText: !_isPasswordVisible,
+                        controller: passwordController,
+                        keyboardType: TextInputType.visiblePassword,
+                        decoration: AppTheme.textFieldDecoration(
+                          context,
+                          label: "Password",
+                          prefixIcon: Icons.lock,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          return null;
+                        },
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () async {
+                            if (emailController.text.isEmpty) {
+                              _showErrorDialog(
+                                  "Please enter your email to reset the password.");
+                              return;
+                            }
+                            try {
+                              await FirebaseAuth.instance
+                                  .sendPasswordResetEmail(
+                                email: emailController.text.trim(),
+                              );
+                              _showSuccessDialog(
+                                  "Password reset email sent! Check your inbox.");
+                            } on FirebaseAuthException catch (e) {
+                              String message =
+                                  "Failed to send password reset email.";
+                              if (e.code == 'user-not-found') {
+                                message = "No user found with this email.";
+                              }
+                              _showErrorDialog1(message);
+                            } catch (e) {
+                              _showErrorDialog1(
+                                  "Something went wrong. Please try again.");
+                            }
+                          },
                           child: Text(
-                            "Continue",
-                            style: TextStyle(fontSize: 16.sp),
+                            "Forgot Password?",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).primaryColor,
+                            ),
                           ),
                         ),
-                        SizedBox(height: isPortrait ? 20.h : 10.h),
-                        Row(
-                          children: [
-                            Expanded(child: Divider(thickness: 1)),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10.w),
-                              child: Text(
-                                "or ",
-                                style: TextStyle(fontSize: 14.sp),
-                              ),
+                      ),
+                      SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _loginUser,
+                          style: AppTheme.elevatedButtonStyle(context),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 14.0),
+                            child: Text(
+                              "Continue",
+                              style: TextStyle(fontSize: 16),
                             ),
-                            Expanded(child: Divider(thickness: 1)),
-                          ],
+                          ),
                         ),
-                        SizedBox(height: isPortrait ? 20.h : 10.h),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            OutlinedButton(
-                              onPressed: () => _navigateToRegister(context),
-                              style: AppTheme.outlinedButtonStyle(context),
-                              child: Image.asset(
-                                appTheme.currentLogoPath,
-                                height: 30,
-                                width: 30,
-                              ),
+                      ),
+                      SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(thickness: 1)),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              "or ",
+                              style: TextStyle(fontSize: 14),
                             ),
-                            OutlinedButton(
-                              onPressed: () async {
-                                try {
-                                  // Trigger Google Sign-In
-                                  final GoogleSignInAccount? googleUser =
-                                      await GoogleSignIn().signIn();
+                          ),
+                          Expanded(child: Divider(thickness: 1)),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => _navigateToRegister(context),
+                            style: AppTheme.outlinedButtonStyle(context),
+                            child: Image.asset(
+                              appTheme.currentLogoPath,
+                              height: 30,
+                              width: 30,
+                            ),
+                          ),
+                          OutlinedButton(
+                            onPressed: () async {
+                              try {
+                                final GoogleSignInAccount? googleUser =
+                                    await GoogleSignIn().signIn();
 
-                                  if (googleUser == null) {
-                                    // The user canceled the sign-in
-                                    return;
-                                  }
-
-                                  // Obtain the Google Sign-In authentication details
-                                  final GoogleSignInAuthentication googleAuth =
-                                      await googleUser.authentication;
-
-                                  // Create a new credential for Firebase
-                                  final credential =
-                                      GoogleAuthProvider.credential(
-                                    accessToken: googleAuth.accessToken,
-                                    idToken: googleAuth.idToken,
-                                  );
-
-                                  // Sign in to Firebase with the Google credential
-                                  await FirebaseAuth.instance
-                                      .signInWithCredential(credential);
-
-                                  // Navigate to the home page after successful login
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => AboutYou()),
-                                  );
-                                } catch (e) {
-                                  _showErrorDialog(
-                                      "Google Sign-In failed. Please try again.");
+                                if (googleUser == null) {
+                                  return;
                                 }
-                              },
-                              style: AppTheme.outlinedButtonStyle(context),
-                              child: Image.asset(
-                                "assets/logo/Google_logo.png",
-                                height: 30,
-                                width: 30,
-                              ),
+
+                                final GoogleSignInAuthentication googleAuth =
+                                    await googleUser.authentication;
+
+                                final credential =
+                                    GoogleAuthProvider.credential(
+                                  accessToken: googleAuth.accessToken,
+                                  idToken: googleAuth.idToken,
+                                );
+
+                                await FirebaseAuth.instance
+                                    .signInWithCredential(credential);
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => AboutYou()),
+                                );
+                              } catch (e) {
+                                _showErrorDialog(
+                                    "Google Sign-In failed. Please try again.");
+                              }
+                            },
+                            style: AppTheme.outlinedButtonStyle(context),
+                            child: Image.asset(
+                              "assets/logo/Google_logo.png",
+                              height: 30,
+                              width: 30,
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

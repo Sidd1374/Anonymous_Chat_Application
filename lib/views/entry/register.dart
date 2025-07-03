@@ -51,305 +51,309 @@ class _RegisterState extends State<Register> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 80.h),
-                Image.asset(
-                  appTheme.currentLogoPath,
-                  height: 80.sp,
-                  width: 80.sp,
-                ),
-                SizedBox(height: 20.h),
-                Text(
-                  "Create Account",
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 28.sp,
-                      ),
-                ),
-                SizedBox(height: 10.h),
-                Text(
-                  "Sign up to start chatting",
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                SizedBox(height: 30.h),
-                SizedBox(
-                  width: 350.w,
-                  child: TextFormField(
-                    controller: emailController,
-                    decoration: AppTheme.textFieldDecoration(
-                      context,
-                      label: "Email",
-                      prefixIcon: Icons.email,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return 'Enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                SizedBox(height: 20.h),
-                SizedBox(
-                  width: 350.w,
-                  child: TextFormField(
-                    controller: passwordController,
-                    obscureText: !_isPasswordVisible,
-                    decoration: AppTheme.textFieldDecoration(
-                      context,
-                      label: "Password",
-                      prefixIcon: Icons.lock,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                SizedBox(height: 20.h),
-                SizedBox(
-                  width: 350.w,
-                  child: TextFormField(
-                    controller: confirmPasswordController,
-                    obscureText: !_isConfirmPasswordVisible,
-                    decoration: AppTheme.textFieldDecoration(
-                      context,
-                      label: "Confirm Password",
-                      prefixIcon: Icons.lock,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isConfirmPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isConfirmPasswordVisible =
-                                !_isConfirmPasswordVisible;
-                          });
-                        },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                Container(
-                  alignment: Alignment.bottomLeft,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Checkbox(
-                        value: _isChecked,
-                        onChanged: (bool? newValue) {
-                          setState(() {
-                            _isChecked = newValue!;
-                          });
-                        },
-                        activeColor: Theme.of(context).primaryColor,
-                        checkColor: Colors.white,
-                        tristate: false,
-                        materialTapTargetSize: MaterialTapTargetSize.padded,
-                        visualDensity: VisualDensity.adaptivePlatformDensity,
-                        autofocus: false,
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            "Agree to Our ",
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              print('Terms & Conditions tapped');
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              "Terms & Conditions",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 10.h),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!_formKey.currentState!.validate()) {
-                      // If form validation fails, return early
-                      return;
-                    }
-
-                    if (!_isChecked) {
-                      _showErrorDialog(
-                          "You must agree to the Terms & Conditions to proceed.");
-                      return;
-                    }
-
-                    final email = emailController.text.trim();
-                    final password = passwordController.text.trim();
-                    final confirmPassword =
-                        confirmPasswordController.text.trim();
-
-                    if (password != confirmPassword) {
-                      _showErrorDialog(
-                          "Password and Confirm Password do not match.");
-                      return;
-                    }
-
-                    try {
-                      // Firebase Authentication logic to register the user
-                      await FirebaseAuth.instance
-                          .createUserWithEmailAndPassword(
-                        email: email,
-                        password: password,
-                      );
-
-                      // Navigate to the next page after successful registration
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => HomePageFrame()),
-                      );
-                    } on FirebaseAuthException catch (e) {
-                      String errorMessage =
-                          "Registration failed. Please try again.";
-                      if (e.code == 'email-already-in-use') {
-                        errorMessage = "This email is already in use.";
-                      } else if (e.code == 'weak-password') {
-                        errorMessage = "The password is too weak.";
-                      } else if (e.code == 'invalid-email') {
-                        errorMessage = "The email address is invalid.";
-                      }
-                      _showErrorDialog(errorMessage);
-                    } catch (e) {
-                      _showErrorDialog(
-                          "An unexpected error occurred. Please try again.");
-                    }
-                  },
-                  style: AppTheme.elevatedButtonStyle(context),
-                  child: const Text("Sign Up"),
-                ),
-                SizedBox(height: 30.h),
-                Row(
+      body: Center(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              // maxWidth: 400, // Responsive max width for desktop/tablet
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Divider(color: Colors.grey),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w),
-                      child: Text(
-                        "OR Login In With",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                    Expanded(
-                      child: Divider(color: Colors.grey),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 25.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => _navigateToLogin(context),
-                      style: AppTheme.outlinedButtonStyle(context),
+                    const SizedBox(height: 24),
+                    Center(
                       child: Image.asset(
                         appTheme.currentLogoPath,
-                        height: 30,
-                        width: 30,
+                        height: 80,
+                        width: 80,
                       ),
                     ),
-                    OutlinedButton(
-                      onPressed: () async {
-                        try {
-                          print("Google Sign-In started");
-                          final GoogleSignInAccount? googleUser =
-                              await GoogleSignIn().signIn();
-                          print("Google User: $googleUser");
-
-                          if (googleUser == null) {
-                            // The user canceled the sign-in
+                    const SizedBox(height: 20),
+                    Center(
+                      child: Text(
+                        "Create Account",
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 28,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Center(
+                      child: Text(
+                        "Sign up to start chatting",
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: AppTheme.textFieldDecoration(
+                        context,
+                        label: "Email",
+                        prefixIcon: Icons.email,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                          return 'Enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: !_isPasswordVisible,
+                      decoration: AppTheme.textFieldDecoration(
+                        context,
+                        label: "Password",
+                        prefixIcon: Icons.lock,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: confirmPasswordController,
+                      obscureText: !_isConfirmPasswordVisible,
+                      decoration: AppTheme.textFieldDecoration(
+                        context,
+                        label: "Confirm Password",
+                        prefixIcon: Icons.lock,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isConfirmPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isConfirmPasswordVisible =
+                                  !_isConfirmPasswordVisible;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please confirm your password';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _isChecked,
+                          onChanged: (bool? newValue) {
+                            setState(() {
+                              _isChecked = newValue!;
+                            });
+                          },
+                          activeColor: Theme.of(context).primaryColor,
+                          checkColor: Colors.white,
+                        ),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Text(
+                                "Agree to Our ",
+                                style: TextStyle(fontSize: 12),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  // Show terms
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                ),
+                                child: Text(
+                                  "Terms & Conditions",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (!_formKey.currentState!.validate()) {
+                            // If form validation fails, return early
                             return;
                           }
 
-                          // Obtain the Google Sign-In authentication details
-                          final GoogleSignInAuthentication googleAuth =
-                              await googleUser.authentication;
+                          if (!_isChecked) {
+                            _showErrorDialog(
+                                "You must agree to the Terms & Conditions to proceed.");
+                            return;
+                          }
 
-                          // Create a new credential for Firebase
-                          final credential = GoogleAuthProvider.credential(
-                            accessToken: googleAuth.accessToken,
-                            idToken: googleAuth.idToken,
-                          );
+                          final email = emailController.text.trim();
+                          final password = passwordController.text.trim();
+                          final confirmPassword =
+                              confirmPasswordController.text.trim();
 
-                          // Sign in to Firebase with the Google credential
-                          await FirebaseAuth.instance
-                              .signInWithCredential(credential);
+                          if (password != confirmPassword) {
+                            _showErrorDialog(
+                                "Password and Confirm Password do not match.");
+                            return;
+                          }
 
-                          // Navigate to the home page after successful sign-in
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => HomePageFrame()),
-                          );
-                        } catch (e) {
-                          _showErrorDialog(
-                              "Google Sign-In failed. Please try again.");
-                        }
-                      },
-                      style: AppTheme.outlinedButtonStyle(context),
-                      child: Image.asset(
-                        "assets/logo/Google_logo.png",
-                        height: 30,
-                        width: 30,
+                          try {
+                            // Firebase Authentication logic to register the user
+                            await FirebaseAuth.instance
+                                .createUserWithEmailAndPassword(
+                              email: email,
+                              password: password,
+                            );
+
+                            // Navigate to the next page after successful registration
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => HomePageFrame()),
+                            );
+                          } on FirebaseAuthException catch (e) {
+                            String errorMessage =
+                                "Registration failed. Please try again.";
+                            if (e.code == 'email-already-in-use') {
+                              errorMessage = "This email is already in use.";
+                            } else if (e.code == 'weak-password') {
+                              errorMessage = "The password is too weak.";
+                            } else if (e.code == 'invalid-email') {
+                              errorMessage = "The email address is invalid.";
+                            }
+                            _showErrorDialog(errorMessage);
+                          } catch (e) {
+                            _showErrorDialog(
+                                "An unexpected error occurred. Please try again.");
+                          }
+                        },
+                        style: AppTheme.elevatedButtonStyle(context),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14.0),
+                          child: Text(
+                            "Sign Up",
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 30),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider(color: Colors.grey)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            "OR Login In With",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        const Expanded(child: Divider(color: Colors.grey)),
+                      ],
+                    ),
+                    const SizedBox(height: 25),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => _navigateToLogin(context),
+                          style: AppTheme.outlinedButtonStyle(context),
+                          child: Image.asset(
+                            appTheme.currentLogoPath,
+                            height: 30,
+                            width: 30,
+                          ),
+                        ),
+                        OutlinedButton(
+                          onPressed: () async {
+                            try {
+                              print("Google Sign-In started");
+                              final GoogleSignInAccount? googleUser =
+                                  await GoogleSignIn().signIn();
+                              print("Google User: $googleUser");
+
+                              if (googleUser == null) {
+                                // The user canceled the sign-in
+                                return;
+                              }
+
+                              // Obtain the Google Sign-In authentication details
+                              final GoogleSignInAuthentication googleAuth =
+                                  await googleUser.authentication;
+
+                              // Create a new credential for Firebase
+                              final credential = GoogleAuthProvider.credential(
+                                accessToken: googleAuth.accessToken,
+                                idToken: googleAuth.idToken,
+                              );
+
+                              // Sign in to Firebase with the Google credential
+                              await FirebaseAuth.instance
+                                  .signInWithCredential(credential);
+
+                              // Navigate to the home page after successful sign-in
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => HomePageFrame()),
+                              );
+                            } catch (e) {
+                              _showErrorDialog(
+                                  "Google Sign-In failed. Please try again.");
+                            }
+                          },
+                          style: AppTheme.outlinedButtonStyle(context),
+                          child: Image.asset(
+                            "assets/logo/Google_logo.png",
+                            height: 30,
+                            width: 30,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 25),
                   ],
                 ),
-                SizedBox(height: 25.h),
-              ],
+              ),
             ),
           ),
         ),
