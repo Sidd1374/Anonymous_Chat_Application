@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:veil_chat_application/core/app_theme.dart';
 
 class UserCard extends StatelessWidget {
@@ -6,6 +7,8 @@ class UserCard extends StatelessWidget {
   final String gender;
   final String age;
   final String imagePath;
+  final bool isLevel2Verified;
+  final String? address;
   final VoidCallback? onPressed;
 
   const UserCard({
@@ -14,6 +17,8 @@ class UserCard extends StatelessWidget {
     required this.gender,
     required this.age,
     required this.imagePath,
+    this.isLevel2Verified = false,
+    this.address,
     this.onPressed,
   });
 
@@ -25,7 +30,7 @@ class UserCard extends StatelessWidget {
       onTap: onPressed,
       child: Container(
         width: 180,
-        height: 223,
+        height: 243,
         clipBehavior: Clip.antiAlias,
         decoration: ShapeDecoration(
           color: Theme.of(context).colorScheme.secondary,
@@ -122,12 +127,35 @@ class UserCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Placeholder for badge or icon
-            Positioned(
-              left: 144,
-              top: 16,
-              child: Container(width: 20, height: 20, child: Stack()),
-            ),
+            // Level 2 Verification Logo (SVG) on top right
+            if (isLevel2Verified)
+              Positioned(
+                right: 10,
+                top: 10,
+                child: SvgPicture.asset(
+                  'assets/icons/icon_verified.svg', // Change path as needed
+                  width: 25,
+                  height: 25,
+                ),
+              ),
+            // // Address (if verified)
+            // if (isLevel2Verified && address != null && address!.isNotEmpty)
+            //   Positioned(
+            //     left: 10,
+            //     bottom: 8,
+            //     right: 10,
+            //     child: Text(
+            //       address!,
+            //       textAlign: TextAlign.center,
+            //       style: TextStyle(
+            //         color: AppTheme.cardAddressColor(context),
+            //         fontSize: 11,
+            //         fontWeight: FontWeight.w400,
+            //       ),
+            //       maxLines: 2,
+            //       overflow: TextOverflow.ellipsis,
+            //     ),
+            //   ),
           ],
         ),
       ),
