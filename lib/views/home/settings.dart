@@ -21,7 +21,6 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _gender;
   String? _age;
   String? _profileImagePath;
-
   final TextEditingController _minAgeController = TextEditingController();
   final TextEditingController _maxAgeController = TextEditingController();
 
@@ -215,6 +214,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                           onChanged: (value) {
                             // handle min age change
+                            _minAgeController.text = value;
                           },
                         ),
                       ),
@@ -232,6 +232,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                           onChanged: (value) {
                             // handle max age change
+                            _maxAgeController.text = value;
                           },
                         ),
                       ),
