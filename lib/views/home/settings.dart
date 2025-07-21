@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../../routes/routes.dart';
-// import 'package:veil_chat_application/models/user_model.dart' as mymodel;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/core/app_theme.dart';
+import 'profile.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -12,10 +16,139 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  mymodel.User? user;
+  String? _name = '';
+  String? _gender;
+  String? _age;
+  String? _profileImagePath;
+
+  final TextEditingController _minAgeController = TextEditingController();
+  final TextEditingController _maxAgeController = TextEditingController();
+
   bool _chatWithOppositeGender = false;
   bool _showProfilePhotoToStrangers = false;
   bool _showProfilePhotoToFriends = false;
   bool _chatOnlyWithVerifiedUsers = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    try {
+      final loadedUser = await mymodel.User.getFromPrefs();
+      final profileDetails = await mymodel.User.getProfileDetails();
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        user = loadedUser;
+        _name = profileDetails['fullName'] ?? '';
+        _gender = profileDetails['gender'] ?? '';
+        _age = profileDetails['age'] ?? '';
+        _profileImagePath = prefs.getString('profile_image_path');
+      });
+    } catch (e) {
+      setState(() {
+        user = null;
+        _name = '';
+        _gender = '';
+        _age = '';
+        _profileImagePath = null;
+      });
+    }
+  }
+
+  Widget _buildProfileCard(ThemeData theme) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfileLvl1(),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 4,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        color: theme.colorScheme.secondary,
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Profile Image
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(width: 2, color: theme.primaryColor),
+                  color: theme.dialogBackgroundColor,
+                ),
+                child: (_profileImagePath != null &&
+                        _profileImagePath!.isNotEmpty)
+                    ? ClipOval(
+                        child: Image.file(
+                          File(_profileImagePath!),
+                          fit: BoxFit.cover,
+                          width: 100,
+                          height: 100,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.person,
+                            size: 50,
+                            color: theme.hintColor,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.person,
+                        size: 50,
+                        color: theme.hintColor,
+                      ),
+              ),
+              SizedBox(width: 16.w),
+              // User Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _name ?? 'User Name',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      (_gender ?? '').isNotEmpty ? _gender! : 'Gender not set',
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      (_age ?? '').isNotEmpty ? _age! : 'Age not set',
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +177,8 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildProfileCard(Theme.of(context)),
+              const SizedBox(height: 30.0),
               Text(
                 'Chat Preferences',
                 style: Theme.of(context).textTheme.titleLarge,
@@ -60,7 +195,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   });
                 },
               ),
-              // the age range selection
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Padding(
@@ -105,7 +239,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              // the switch for showing profile photo to strangers and friends
               SwitchListTile(
                 title: const Text('Show Profile photo to strangers'),
                 value: _showProfilePhotoToStrangers,
@@ -128,7 +261,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   });
                 },
               ),
-              // the switch for chatting only with verified users
               SwitchListTile(
                 title: const Text('Chat only with Lvl 2 verified users'),
                 value: _chatOnlyWithVerifiedUsers,
@@ -148,686 +280,3 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 }
-
-// class _SettingsPageState extends State<SettingsPage> {
-//   mymodel.User? user;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _loadUser();
-//   }
-
-//   Future<void> _loadUser() async {
-//     final loadedUser = await mymodel.User.getFromPrefs();
-//     setState(() {
-//       user = loadedUser;
-//     });
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return user == null
-//         ? const Center(child: CircularProgressIndicator())
-//         : SingleChildScrollView(
-//             child: Column(
-//               children: [
-//                 Container(
-//                   width: 428,
-//                   height: 926,
-//                   clipBehavior: Clip.antiAlias,
-//                   decoration: ShapeDecoration(
-//                     color: const Color(0xFFF1E5DD),
-//                     shape: RoundedRectangleBorder(
-//                       borderRadius: BorderRadius.circular(10),
-//                     ),
-//                     shadows: [
-//                       BoxShadow(
-//                         color: const Color(0x19000000),
-//                         blurRadius: 10,
-//                         offset: const Offset(0, 4),
-//                         spreadRadius: 5,
-//                       )
-//                     ],
-//                   ),
-//                   child: Stack(
-//                     children: [
-//                       Positioned(
-//                         left: 62,
-//                         top: 30,
-//                         child: Text(
-//                           'Settings',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 24,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 29,
-//                         child: Container(width: 32, height: 32, child: Stack()),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 249,
-//                         child: Text(
-//                           'Chat Preferences',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 18,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 300,
-//                         child: Text(
-//                           'Chat only with opposite gender',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 16,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w400,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 350,
-//                         top: 291,
-//                         child: Container(
-//                           width: 60,
-//                           height: 36,
-//                           child: Stack(
-//                             children: [
-//                               Positioned(
-//                                 left: 0,
-//                                 top: 0,
-//                                 child: Container(
-//                                   width: 60,
-//                                   height: 36,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFFFF2EA),
-//                                     shape: RoundedRectangleBorder(
-//                                       side: BorderSide(
-//                                         width: 1,
-//                                         color: const Color(0xFFF1E5DD),
-//                                       ),
-//                                       borderRadius: BorderRadius.circular(200),
-//                                     ),
-//                                     shadows: [
-//                                       BoxShadow(
-//                                         color: Color(0x19000000),
-//                                         blurRadius: 10,
-//                                         offset: Offset(0, 4),
-//                                         spreadRadius: 0,
-//                                       )
-//                                     ],
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 28.50,
-//                                 top: 4.50,
-//                                 child: Container(
-//                                   width: 27,
-//                                   height: 27,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFFF964B),
-//                                     shape: OvalBorder(),
-//                                   ),
-//                                 ),
-//                               ),
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 346,
-//                         child: Text(
-//                           'Chat only with people of age ',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 16,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w400,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 320,
-//                         top: 346,
-//                         child: Text(
-//                           'to',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 16,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w400,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 246,
-//                         top: 337,
-//                         child: Container(
-//                           width: 60,
-//                           height: 36,
-//                           decoration: ShapeDecoration(
-//                             color: const Color(0xFFFFF2EA),
-//                             shape: RoundedRectangleBorder(
-//                               borderRadius: BorderRadius.circular(200),
-//                             ),
-//                             shadows: [
-//                               BoxShadow(
-//                                 color: Color(0x19000000),
-//                                 blurRadius: 10,
-//                                 offset: Offset(0, 4),
-//                                 spreadRadius: 0,
-//                               )
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 258,
-//                         top: 341,
-//                         child: SizedBox(
-//                           width: 36,
-//                           height: 29,
-//                           child: Text(
-//                             '18',
-//                             textAlign: TextAlign.center,
-//                             style: TextStyle(
-//                               color: const Color(0xFFFF964B),
-//                               fontSize: 16,
-//                               fontFamily: 'Inter',
-//                               fontWeight: FontWeight.w500,
-//                             ),
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 350,
-//                         top: 337,
-//                         child: Container(
-//                           width: 60,
-//                           height: 36,
-//                           decoration: ShapeDecoration(
-//                             color: const Color(0xFFFFF2EA),
-//                             shape: RoundedRectangleBorder(
-//                               borderRadius: BorderRadius.circular(200),
-//                             ),
-//                             shadows: [
-//                               BoxShadow(
-//                                 color: Color(0x19000000),
-//                                 blurRadius: 10,
-//                                 offset: Offset(0, 4),
-//                                 spreadRadius: 0,
-//                               )
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 362,
-//                         top: 341,
-//                         child: SizedBox(
-//                           width: 36,
-//                           height: 29,
-//                           child: Text(
-//                             '30',
-//                             textAlign: TextAlign.center,
-//                             style: TextStyle(
-//                               color: const Color(0xFFFF964B),
-//                               fontSize: 16,
-//                               fontFamily: 'Inter',
-//                               fontWeight: FontWeight.w500,
-//                             ),
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 392,
-//                         child: Text(
-//                           'Show your Profile photo to strangers',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 16,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w400,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 350,
-//                         top: 383,
-//                         child: Container(
-//                           width: 60,
-//                           height: 36,
-//                           child: Stack(
-//                             children: [
-//                               Positioned(
-//                                 left: 0,
-//                                 top: 0,
-//                                 child: Container(
-//                                   width: 60,
-//                                   height: 36,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFFFF2EA),
-//                                     shape: RoundedRectangleBorder(
-//                                       side: BorderSide(
-//                                         width: 1,
-//                                         color: const Color(0xFFF1E5DD),
-//                                       ),
-//                                       borderRadius: BorderRadius.circular(200),
-//                                     ),
-//                                     shadows: [
-//                                       BoxShadow(
-//                                         color: Color(0x19000000),
-//                                         blurRadius: 10,
-//                                         offset: Offset(0, 4),
-//                                         spreadRadius: 0,
-//                                       )
-//                                     ],
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 4.50,
-//                                 top: 4.50,
-//                                 child: Container(
-//                                   width: 27,
-//                                   height: 27,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFF1E5DD),
-//                                     shape: OvalBorder(),
-//                                   ),
-//                                 ),
-//                               ),
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 438,
-//                         child: Text(
-//                           'Show your Profile photo to friends',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 16,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w400,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 350,
-//                         top: 429,
-//                         child: Container(
-//                           width: 60,
-//                           height: 36,
-//                           child: Stack(
-//                             children: [
-//                               Positioned(
-//                                 left: 0,
-//                                 top: 0,
-//                                 child: Container(
-//                                   width: 60,
-//                                   height: 36,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFFFF2EA),
-//                                     shape: RoundedRectangleBorder(
-//                                       side: BorderSide(
-//                                         width: 1,
-//                                         color: const Color(0xFFF1E5DD),
-//                                       ),
-//                                       borderRadius: BorderRadius.circular(200),
-//                                     ),
-//                                     shadows: [
-//                                       BoxShadow(
-//                                         color: Color(0x19000000),
-//                                         blurRadius: 10,
-//                                         offset: Offset(0, 4),
-//                                         spreadRadius: 0,
-//                                       )
-//                                     ],
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 28.50,
-//                                 top: 4.50,
-//                                 child: Container(
-//                                   width: 27,
-//                                   height: 27,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFFF964B),
-//                                     shape: OvalBorder(),
-//                                   ),
-//                                 ),
-//                               ),
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 484,
-//                         child: Text(
-//                           'Chat only with Lvl 2 verified users',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 16,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w400,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 350,
-//                         top: 475,
-//                         child: Container(
-//                           width: 60,
-//                           height: 36,
-//                           child: Stack(
-//                             children: [
-//                               Positioned(
-//                                 left: 0,
-//                                 top: 0,
-//                                 child: Container(
-//                                   width: 60,
-//                                   height: 36,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFFFF2EA),
-//                                     shape: RoundedRectangleBorder(
-//                                       side: BorderSide(
-//                                         width: 1,
-//                                         color: const Color(0xFFF1E5DD),
-//                                       ),
-//                                       borderRadius: BorderRadius.circular(200),
-//                                     ),
-//                                     shadows: [
-//                                       BoxShadow(
-//                                         color: Color(0x19000000),
-//                                         blurRadius: 10,
-//                                         offset: Offset(0, 4),
-//                                         spreadRadius: 0,
-//                                       )
-//                                     ],
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 4.50,
-//                                 top: 4.50,
-//                                 child: Container(
-//                                   width: 27,
-//                                   height: 27,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFF1E5DD),
-//                                     shape: OvalBorder(),
-//                                   ),
-//                                 ),
-//                               ),
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 541,
-//                         child: Text(
-//                           'App Settings',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 18,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w600,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 592,
-//                         child: Text(
-//                           'Dark Theme',
-//                           style: TextStyle(
-//                             color: const Color(0xFF282725),
-//                             fontSize: 16,
-//                             fontFamily: 'Inter',
-//                             fontWeight: FontWeight.w400,
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 350,
-//                         top: 583,
-//                         child: Container(
-//                           width: 60,
-//                           height: 36,
-//                           child: Stack(
-//                             children: [
-//                               Positioned(
-//                                 left: 0,
-//                                 top: 0,
-//                                 child: Container(
-//                                   width: 60,
-//                                   height: 36,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFFFF2EA),
-//                                     shape: RoundedRectangleBorder(
-//                                       side: BorderSide(
-//                                         width: 1,
-//                                         color: const Color(0xFFF1E5DD),
-//                                       ),
-//                                       borderRadius: BorderRadius.circular(200),
-//                                     ),
-//                                     shadows: [
-//                                       BoxShadow(
-//                                         color: Color(0x19000000),
-//                                         blurRadius: 10,
-//                                         offset: Offset(0, 4),
-//                                         spreadRadius: 0,
-//                                       )
-//                                     ],
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 4.50,
-//                                 top: 4.50,
-//                                 child: Container(
-//                                   width: 27,
-//                                   height: 27,
-//                                   decoration: ShapeDecoration(
-//                                     color: const Color(0xFFF1E5DD),
-//                                     shape: OvalBorder(),
-//                                   ),
-//                                 ),
-//                               ),
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 629,
-//                         child: SizedBox(
-//                           width: 392,
-//                           height: 36,
-//                           child: Text(
-//                             'Terms and Conditions',
-//                             style: TextStyle(
-//                               color: const Color(0xFF282725),
-//                               fontSize: 16,
-//                               fontFamily: 'Inter',
-//                               fontWeight: FontWeight.w400,
-//                             ),
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 675,
-//                         child: SizedBox(
-//                           width: 392,
-//                           height: 36,
-//                           child: Text(
-//                             'Privacy Policy',
-//                             style: TextStyle(
-//                               color: const Color(0xFF282725),
-//                               fontSize: 16,
-//                               fontFamily: 'Inter',
-//                               fontWeight: FontWeight.w400,
-//                             ),
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 721,
-//                         child: SizedBox(
-//                           width: 392,
-//                           height: 36,
-//                           child: Text(
-//                             'About',
-//                             style: TextStyle(
-//                               color: const Color(0xFF282725),
-//                               fontSize: 16,
-//                               fontFamily: 'Inter',
-//                               fontWeight: FontWeight.w400,
-//                             ),
-//                           ),
-//                         ),
-//                       ),
-//                       Positioned(
-//                         left: 18,
-//                         top: 89,
-//                         child: Container(
-//                           width: 392,
-//                           height: 130,
-//                           clipBehavior: Clip.antiAlias,
-//                           decoration: ShapeDecoration(
-//                             color: const Color(0xFFFFF2EA),
-//                             shape: RoundedRectangleBorder(
-//                               borderRadius: BorderRadius.circular(20),
-//                             ),
-//                             shadows: [
-//                               BoxShadow(
-//                                 color: Color(0x19000000),
-//                                 blurRadius: 10,
-//                                 offset: Offset(0, 4),
-//                                 spreadRadius: 0,
-//                               )
-//                             ],
-//                           ),
-//                           child: Stack(
-//                             children: [
-//                               Positioned(
-//                                 left: 249,
-//                                 top: 15,
-//                                 child: Text(
-//                                   user?.fullName.isNotEmpty == true
-//                                       ? user!.fullName
-//                                       : 'No Name',
-//                                   textAlign: TextAlign.right,
-//                                   style: const TextStyle(
-//                                     color: Color(0xFF282725),
-//                                     fontSize: 28,
-//                                     fontFamily: 'Inter',
-//                                     fontWeight: FontWeight.w600,
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 354,
-//                                 top: 54,
-//                                 child: Text(
-//                                   '', // Add age if available
-//                                   textAlign: TextAlign.right,
-//                                   style: const TextStyle(
-//                                     color: Color(0xFF282725),
-//                                     fontSize: 18,
-//                                     fontFamily: 'Inter',
-//                                     fontWeight: FontWeight.w300,
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 302,
-//                                 top: 54,
-//                                 child: Text(
-//                                   '', // Add gender if available
-//                                   textAlign: TextAlign.right,
-//                                   style: const TextStyle(
-//                                     color: Color(0xFF282725),
-//                                     fontSize: 18,
-//                                     fontFamily: 'Inter',
-//                                     fontWeight: FontWeight.w300,
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 190,
-//                                 top: 98,
-//                                 child: Text(
-//                                   'Click here to see your profile',
-//                                   textAlign: TextAlign.right,
-//                                   style: TextStyle(
-//                                     color: const Color(0xFF282725),
-//                                     fontSize: 14,
-//                                     fontFamily: 'Inter',
-//                                     fontWeight: FontWeight.w300,
-//                                   ),
-//                                 ),
-//                               ),
-//                               Positioned(
-//                                 left: 214,
-//                                 top: 22,
-//                                 child: Container(
-//                                     width: 20, height: 20, child: Stack()),
-//                               ),
-//                               Positioned(
-//                                 left: 15,
-//                                 top: 15,
-//                                 child: Container(
-//                                   width: 100,
-//                                   height: 100,
-//                                   decoration: ShapeDecoration(
-//                                     image: DecorationImage(
-//                                       image: user?.profilePic != null &&
-//                                               user!.profilePic.isNotEmpty
-//                                           ? NetworkImage(user!.profilePic)
-//                                           : const NetworkImage(
-//                                               "https://placehold.co/100x100"),
-//                                       fit: BoxFit.cover,
-//                                     ),
-//                                     shape: const OvalBorder(
-//                                       side: BorderSide(
-//                                         width: 2,
-//                                         color: Color(0xFFFF964B),
-//                                       ),
-//                                     ),
-//                                   ),
-//                                 ),
-//                               ),
-//                             ],
-//                           ),
-//                         ),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ],
-//             ),
-//           );
-//   }
-// }

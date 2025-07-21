@@ -99,13 +99,13 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         iconTheme: theme.appBarTheme.iconTheme,
         titleTextStyle: theme.appBarTheme.titleTextStyle,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () =>
-                Navigator.pushNamed(context, route.AppRoutes.settings),
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.settings),
+        //     onPressed: () =>
+        //         Navigator.pushNamed(context, route.AppRoutes.settings),
+        //   ),
+        // ],
       ),
       body: Center(
         child: SingleChildScrollView(

@@ -7,7 +7,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'homepage.dart';
 import 'friends_list.dart';
 import 'history.dart';
-import 'profile.dart';
+import 'settings.dart';
+import 'searching_Loader.dart';
 // import '../../views/test_1.dart';
 
 class HomePageFrame extends StatefulWidget {
@@ -60,7 +61,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ProfileLvl1()),
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
                 );
               },
               icon: SvgPicture.asset(
