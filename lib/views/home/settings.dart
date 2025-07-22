@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/core/app_theme.dart';
 import 'profile.dart';
+import 'package:veil_chat_application/widgets/docs_dialogs.dart' as dia;
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -28,6 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _showProfilePhotoToStrangers = false;
   bool _showProfilePhotoToFriends = false;
   bool _chatOnlyWithVerifiedUsers = false;
+  bool _isNotificationsEnabled = false;
 
   @override
   void initState() {
@@ -85,7 +87,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(width: 2, color: theme.primaryColor),
-                  color: theme.dialogBackgroundColor,
+                  color: theme.colorScheme.secondary,
                 ),
                 child: (_profileImagePath != null &&
                         _profileImagePath!.isNotEmpty)
@@ -180,7 +182,9 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 30.0),
               Text(
                 'Chat Preferences',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               const SizedBox(height: 16.0),
               SwitchListTile(
@@ -274,10 +278,55 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
               const SizedBox(height: 8.0),
+              // Text(
+              //   'App Settings',
+              //   style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              //         fontWeight: FontWeight.bold,
+              //       ),
+              // ),
+              // const SizedBox(height: 16.0),
+              // SwitchListTile(
+              //   title: const Text('Enable Notifications'),
+              //   value: _isNotificationsEnabled,
+              //   activeColor: Theme.of(context).primaryColor,
+              //   inactiveTrackColor: Theme.of(context).colorScheme.secondary,
+              //   onChanged: (bool value) {
+              //     setState(() {
+              //       _isNotificationsEnabled = value;
+              //     });
+              //   },
+              // ),
+                TextButton(
+                onPressed: () => dia.showTermsDialog(context),
+                style: Theme.of(context).textButtonTheme.style?.copyWith(
+                    foregroundColor: WidgetStateProperty.all<Color>(
+                    Theme.of(context).colorScheme.secondary,
+                    ),
+                  ),
+                child: Text('Terms of Service'),
+                ),
+                TextButton(
+                onPressed: () => dia.showPrivacyPolicyDialog(context),
+                child: Text('Privacy Policy'),
+                ),
+                TextButton(
+                onPressed: () => dia.showHelpSupportDialog(context),
+                child: Text('Help & Support'),
+                ),
+                TextButton(
+                onPressed: () => dia.showAboutUsDialog(context),
+                child: Text('About Us'),
+                ),
+              const SizedBox(height: 20.0),
             ],
           ),
         ),
       ),
     );
+  }
+
+  void pass() {
+    // Placeholder for future functionality
+    // This can be used to navigate to respective pages or show dialogs
   }
 }
