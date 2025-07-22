@@ -8,7 +8,6 @@ import 'homepage.dart';
 import 'friends_list.dart';
 import 'history.dart';
 import 'settings.dart';
-import 'searching_Loader.dart';
 // import '../../views/test_1.dart';
 
 class HomePageFrame extends StatefulWidget {
@@ -42,30 +41,32 @@ class _HomePageFrameState extends State<HomePageFrame> {
         automaticallyImplyLeading: false,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
+            children: [
             Row(
               children: [
-                Image.asset(
-                  appTheme.currentLogoPath,
-                  height: 35,
-                  width: 35,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  "VEIL",
-                  style: Theme.of(context).appBarTheme.titleTextStyle,
-                ),
+              Image.asset(
+                appTheme.currentLogoPath,
+                height: 35,
+                width: 35,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "VEIL",
+                style: Theme.of(context).appBarTheme.titleTextStyle,
+              ),
               ],
             ),
             IconButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsPage()),
-                );
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsPage()),
+              );
               },
               icon: SvgPicture.asset(
-                'assets/icons/icon_menu.svg',
+              'assets/icons/icon_menu.svg',
+              width: 32, // Increased size
+              height: 32,
               ),
             ),
           ],
