@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:veil_chat_application/views/home/settings.dart';
 import 'package:veil_chat_application/widgets/button.dart';
 import 'searching_Loader.dart';
 
