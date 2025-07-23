@@ -97,6 +97,7 @@ flutter:
     - assets/icons/icon_verified.svg
 
     - assets/Profile_image.png
+    - assets/Profile.png
 
 
   #   - images/a_dot_burr.jpeg

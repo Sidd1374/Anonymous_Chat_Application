@@ -3,7 +3,16 @@ import 'package:veil_chat_application/widgets/Chat/chat_text.dart';
 import 'package:veil_chat_application/widgets/Chat/chat_actions_bar.dart';
 
 class ChatArea extends StatefulWidget {
-  const ChatArea({super.key});
+  final String userName;
+  final String userImage;
+  final String chatId;
+
+  const ChatArea({
+    super.key,
+    required this.userName,
+    required this.userImage,
+    required this.chatId, // Mark as required
+  });
 
   @override
   State<ChatArea> createState() => _ChatAreaState();
@@ -30,10 +39,30 @@ class _ChatAreaState extends State<ChatArea> {
   }
 
   @override
+  void dispose() {
+    _inputTextController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+
+    final String currentUserName = widget.userName;
+    final String currentUserImage = widget.userImage;
+    final String currentChatId = widget.chatId;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundImage: AssetImage(currentUserImage), // Or NetworkImage if from URL
+              radius: 18, // Adjust size as needed
+            ),
+            const SizedBox(width: 8),
+            Text(currentUserName), // Display the passed user name
+          ],
+        ),
       ),
       body: Column(
         children: [
