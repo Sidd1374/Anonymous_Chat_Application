@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
-// import '../../routes/routes.dart' as route;
+import 'package:image_picker/image_picker.dart';
 
 class ProfileLvl1 extends StatefulWidget {
   const ProfileLvl1({super.key});
@@ -88,6 +88,67 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     );
   }
 
+  void _showEditInterestDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Interests'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _interests.length,
+              itemBuilder: (context, index) {
+                final interest = _interests[index];
+                return ListTile(
+                  title: Text(interest),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      setState(() {
+                        _interests.removeAt(index);
+                      });
+                      Navigator.of(context).pop();
+                      _showEditInterestDialog(); // Reopen dialog to reflect changes
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showAddInterestDialog();
+              },
+              child: const Text('Add Interest'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _editProfileImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final savedPath =
+          await mymodel.User.saveProfileImageLocally(File(pickedFile.path));
+      setState(() {
+        _profileImagePath = savedPath;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -99,13 +160,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         iconTheme: theme.appBarTheme.iconTheme,
         titleTextStyle: theme.appBarTheme.titleTextStyle,
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Icons.settings),
-        //     onPressed: () =>
-        //         Navigator.pushNamed(context, route.AppRoutes.settings),
-        //   ),
-        // ],
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -127,28 +181,46 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                 ),
                 child: Column(
                   children: [
-                    // Profile Picture
-                    Container(
-                      width: 150,
-                      height: 150,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: theme.primaryColor,
-                          width: 2,
+                    // Profile Picture with Edit Button (Plus Icon)
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Container(
+                          width: 150,
+                          height: 150,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.primaryColor,
+                              width: 2,
+                            ),
+                            image: _profileImagePath != null &&
+                                    _profileImagePath!.isNotEmpty &&
+                                    File(_profileImagePath!).existsSync()
+                                ? DecorationImage(
+                                    image: FileImage(File(_profileImagePath!)),
+                                    fit: BoxFit.cover,
+                                  )
+                                : const DecorationImage(
+                                    image: AssetImage('assets/Profile_image.png'),
+                                    fit: BoxFit.cover,
+                                  ),
                         ),
-                        image: _profileImagePath != null &&
-                                _profileImagePath!.isNotEmpty &&
-                                File(_profileImagePath!).existsSync()
-                            ? DecorationImage(
-                                image: FileImage(File(_profileImagePath!)),
-                                fit: BoxFit.cover,
-                              )
-                            : const DecorationImage(
-                                image: AssetImage('assets/Profile_image.png'),
-                                fit: BoxFit.cover,
-                              ),
-                      ),
+                        ),
+                        GestureDetector(
+                          onTap: _editProfileImage,
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: theme.primaryColor,
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                        
+                      ],
                     ),
                     const SizedBox(height: 20),
                     // User Information
@@ -179,11 +251,11 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           .toList(),
                     ),
                     const SizedBox(height: 20),
-                    // Add Interests Button
+                    // Edit Interests Button
                     TextButton(
-                      onPressed: _showAddInterestDialog,
+                      onPressed: _showEditInterestDialog,
                       child: Text(
-                        'Add Interests',
+                        'Edit Interests',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.primaryColor,
                           decoration: TextDecoration.underline,

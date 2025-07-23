@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class User {
@@ -82,5 +85,18 @@ class User {
       'gender': prefs.getString('user_gender'),
       'age': prefs.getString('user_age'),
     };
+  }
+
+  static Future<String?> saveProfileImageLocally(File imageFile) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final userDir = Directory('${appDir.path}/Assets/User');
+    if (!await userDir.exists()) {
+      await userDir.create(recursive: true);
+    }
+    final fileName = path.basename(imageFile.path);
+    final savedImage = await imageFile.copy('${userDir.path}/$fileName');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_image_path', savedImage.path);
+    return savedImage.path;
   }
 }
