@@ -41,32 +41,35 @@ class _HomePageFrameState extends State<HomePageFrame> {
         automaticallyImplyLeading: false,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+          children: [
             Row(
               children: [
-              Image.asset(
-                appTheme.currentLogoPath,
-                height: 35,
-                width: 35,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                "VEIL",
-                style: Theme.of(context).appBarTheme.titleTextStyle,
-              ),
+                Image.asset(
+                  appTheme.currentLogoPath,
+                  height: 35,
+                  width: 35,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  "VEIL",
+                  style: Theme.of(context).appBarTheme.titleTextStyle?.copyWith(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
               ],
             ),
             IconButton(
               onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SettingsPage()),
-              );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
               },
               icon: SvgPicture.asset(
-              'assets/icons/icon_menu.svg',
-              width: 32, // Increased size
-              height: 32,
+                'assets/icons/icon_menu.svg',
+                width: 32, // Increased size
+                height: 32,
               ),
             ),
           ],

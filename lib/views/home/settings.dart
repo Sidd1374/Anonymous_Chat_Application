@@ -76,7 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         color: theme.colorScheme.secondary,
         child: Padding(
-          padding: EdgeInsets.all(16.w),
+          padding: EdgeInsets.all(16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [

@@ -17,24 +17,26 @@ class LoaderScreen extends StatelessWidget {
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 60),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Lottie.asset("assets/animation/ani-3.json"),
-            SizedBox(height: 20),
-            Text(
-              'Finding the perfect one for you...',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            SizedBox(height: 40),
-            AppButton(
-              isPrimary: true,
-              isEnabled: true,
-              onPressed: () => Navigator.pop(context),
-              text: "Cancel",
-            ),
-          ],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Lottie.asset("assets/animation/ani-3.json"),
+              SizedBox(height: 20),
+              Text(
+                'Finding the perfect one for you...',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              SizedBox(height: 40),
+              AppButton(
+                isPrimary: true,
+                isEnabled: true,
+                onPressed: () => Navigator.pop(context),
+                text: "Cancel",
+              ),
+            ],
+          ),
         ),
       ),
     );
