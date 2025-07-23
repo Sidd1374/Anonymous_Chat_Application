@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:veil_chat_application/views/chat/chat_area.dart';
 
 class History extends StatefulWidget {
   const History({super.key});
@@ -14,37 +15,44 @@ class _HistoryState extends State<History> {
       'name': 'Alice',
       'image': 'assets/Profile_image.png',
       'isLevel2Verified': 'true',
+      'chatId': '12345',
     },
     {
       'name': 'Bob',
-      'image': 'assets/Profile_image.png',
+      'image': 'assets/Profile.png',
       'isLevel2Verified': 'false',
+      'chatId': '12345',
     },
     {
       'name': 'Charlie',
       'image': 'assets/Profile_image.png',
       'isLevel2Verified': 'true',
+      'chatId': '12345',
     },
     {
       'name': 'Diana',
       'image': 'assets/Profile_image.png',
       'isLevel2Verified': 'false',
+      'chatId': '12345',
     },
     {
       'name': 'Eve',
       'image': 'assets/Profile_image.png',
       'isLevel2Verified': 'true',
+      'chatId': '12345',
     },
     // Add more users for better testing
     {
       'name': 'Frank',
       'image': 'assets/Profile_image.png',
       'isLevel2Verified': 'false',
+      'chatId': '12345',
     },
     {
       'name': 'Grace',
       'image': 'assets/Profile_image.png',
       'isLevel2Verified': 'true',
+      'chatId': '12345',
     },
   ];
 
@@ -75,7 +83,8 @@ class _HistoryState extends State<History> {
   void _filterUsers(String query) {
     setState(() {
       if (query.isEmpty) {
-        _filteredUsers = List.from(_allHistoryUsers); // Show all if query is empty
+        _filteredUsers =
+            List.from(_allHistoryUsers); // Show all if query is empty
       } else {
         _filteredUsers = _allHistoryUsers
             .where((user) =>
@@ -117,7 +126,8 @@ class _HistoryState extends State<History> {
                   onTap: () {
                     setState(() {
                       _isSearching = true; // Show search bar
-                      _searchController.clear(); // Clear previous search on opening
+                      _searchController
+                          .clear(); // Clear previous search on opening
                       _filterUsers(''); // Show all users when opening search
                     });
                   },
@@ -134,17 +144,20 @@ class _HistoryState extends State<History> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    autofocus: true, // Automatically focus when search bar appears
+                    autofocus:
+                        true, // Automatically focus when search bar appears
                     decoration: InputDecoration(
                       hintText: 'Search friends...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none, // No border for a cleaner look
+                        borderSide:
+                            BorderSide.none, // No border for a cleaner look
                       ),
                       filled: true,
-                      fillColor: theme.colorScheme.surface, // Background color for text field
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      fillColor: theme.colorScheme
+                          .surface, // Background color for text field
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 0),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.clear),
                         onPressed: () {
@@ -186,6 +199,8 @@ class _HistoryState extends State<History> {
                       textAlign: TextAlign.center,
                     ),
                   )
+
+                // list of users
                 : ListView.separated(
                     itemCount: _filteredUsers.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
@@ -194,9 +209,21 @@ class _HistoryState extends State<History> {
                       return InkWell(
                         borderRadius: BorderRadius.circular(12),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('${user['name']} card tapped!')),
+                          // Navigate to chat area with the selected user
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatArea(
+                                userName: user['name']!,
+                                userImage: user['image']!,
+                                chatId: user['chatId']!,
+                              ),
+                            ),
                           );
+                          // ScaffoldMessenger.of(context).showSnackBar(
+                          //   SnackBar(
+                          //       content: Text('${user['name']} card tapped!')),
+                          // );
                         },
                         child: Card(
                           elevation: 2,
@@ -234,7 +261,8 @@ class _HistoryState extends State<History> {
                                                 fontWeight: FontWeight.w600,
                                                 fontSize: 18),
                                       ),
-                                      if (user['isLevel2Verified'] == 'true') ...[
+                                      if (user['isLevel2Verified'] ==
+                                          'true') ...[
                                         const SizedBox(width: 8),
                                         SvgPicture.asset(
                                           "assets/icons/icon_verified.svg",

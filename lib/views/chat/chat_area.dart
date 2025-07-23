@@ -49,13 +49,17 @@ class _ChatAreaState extends State<ChatArea> {
 
     final String currentUserName = widget.userName;
     final String currentUserImage = widget.userImage;
-    final String currentChatId = widget.chatId;
+    // final String currentChatId = widget.chatId;
 
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
             CircleAvatar(
+              // backgroundImage: currentUserImage.startsWith('http')
+              //     ? NetworkImage(currentUserImage) as ImageProvider
+              //     : AssetImage(currentUserImage),
+              
               backgroundImage: AssetImage(currentUserImage), // Or NetworkImage if from URL
               radius: 18, // Adjust size as needed
             ),
