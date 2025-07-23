@@ -296,27 +296,31 @@ class _SettingsPageState extends State<SettingsPage> {
               //     });
               //   },
               // ),
-                TextButton(
+              TextButton(
                 onPressed: () => dia.showTermsDialog(context),
                 style: Theme.of(context).textButtonTheme.style?.copyWith(
-                    foregroundColor: WidgetStateProperty.all<Color>(
-                    Theme.of(context).colorScheme.secondary,
+                      foregroundColor: WidgetStateProperty.all<Color>(
+                        Theme.of(context).colorScheme.secondary,
+                      ),
                     ),
-                  ),
                 child: Text('Terms of Service'),
-                ),
-                TextButton(
+              ),
+              TextButton(
                 onPressed: () => dia.showPrivacyPolicyDialog(context),
                 child: Text('Privacy Policy'),
-                ),
-                TextButton(
+              ),
+              TextButton(
                 onPressed: () => dia.showHelpSupportDialog(context),
                 child: Text('Help & Support'),
-                ),
-                TextButton(
+              ),
+              TextButton(
                 onPressed: () => dia.showAboutUsDialog(context),
                 child: Text('About Us'),
-                ),
+              ),
+              TextButton(
+                onPressed: () => mymodel.User.logout(context),
+                child: Text('Logout'),
+              ),
               const SizedBox(height: 20.0),
             ],
           ),

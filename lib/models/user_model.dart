@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:veil_chat_application/views/entry/login.dart';
 
 class User {
   final String email;
@@ -98,5 +100,21 @@ class User {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_image_path', savedImage.path);
     return savedImage.path;
+  }
+
+  /// Logs out the user by clearing all SharedPreferences data
+  /// and navigating to the login page.
+  static Future<void> logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clears ALL data saved by your app in SharedPreferences
+
+    // After clearing data, navigate to the login page.
+    // pushAndRemoveUntil ensures the user cannot go back to previous authenticated screens.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+          builder: (context) =>
+              const Login()), // Replace LoginPage() with your actual login page widget
+      (Route<dynamic> route) => false, // This predicate removes all previous routes
+    );
   }
 }
