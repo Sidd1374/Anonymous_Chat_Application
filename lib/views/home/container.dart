@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:veil_chat_application/views/entry/welcome.dart';
 import '../../core/app_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -44,10 +45,16 @@ class _HomePageFrameState extends State<HomePageFrame> {
           children: [
             Row(
               children: [
-                Image.asset(
-                  appTheme.currentLogoPath,
-                  height: 35,
-                  width: 35,
+                GestureDetector(
+                  onLongPress: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => Welcome()),
+                  ),
+                  child: Image.asset(
+                    appTheme.currentLogoPath,
+                    height: 35,
+                    width: 35,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Text(

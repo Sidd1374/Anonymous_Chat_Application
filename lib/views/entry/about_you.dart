@@ -1,4 +1,4 @@
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/entry/profile_created.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,14 +8,22 @@ import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 
 // import '../home/home_test.dart';
 
-class AboutYou extends StatefulWidget {
-  const AboutYou({super.key});
+// String EditType = "";
+// String UID = "";
+
+class EditInformation extends StatefulWidget {
+  const EditInformation({
+    super.key,
+    // required this.UID,
+    // required this.EditType,
+    });
+
 
   @override
-  State<AboutYou> createState() => _AboutYouState();
+  State<EditInformation> createState() => _EditInformationState();
 }
 
-class _AboutYouState extends State<AboutYou> {
+class _EditInformationState extends State<EditInformation> {
   File? _profileImage;
   final TextEditingController _nameController = TextEditingController();
   String _selectedGender = 'Select a gender';
@@ -213,12 +221,9 @@ class _AboutYouState extends State<AboutYou> {
       onPressed: () async {
         // Save name, gender, and age to SharedPreferences
         await mymodel.User.saveProfileDetails(
-          fullName: _nameController.text.isNotEmpty
-              ? _nameController.text
-              : 'John Doe',
-          gender:
-              _selectedGender != 'Select a gender' ? _selectedGender : 'Male',
-          age: _ageController.text.isNotEmpty ? _ageController.text : '20',
+          fullName: _nameController.text.isNotEmpty ? _nameController.text : '',
+          gender: _selectedGender != 'Select a gender' ? _selectedGender : '',
+          age: _ageController.text.isNotEmpty ? _ageController.text : '',
         );
 
         // Save profile image locally and store path in SharedPreferences

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/app_theme.dart';
@@ -279,7 +279,7 @@ class _LoginState extends State<Login> {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => AboutYou()),
+                                      builder: (context) => EditInformation()),
                                 );
                               } catch (e) {
                                 _showErrorDialog(
@@ -316,7 +316,7 @@ class _LoginState extends State<Login> {
   void _navigateToHome(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => AboutYou()),
+      MaterialPageRoute(builder: (context) => EditInformation()),
     );
   }
 
