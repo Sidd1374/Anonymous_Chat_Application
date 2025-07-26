@@ -1,11 +1,16 @@
+import 'package:veil_chat_application/views/entry/about_you.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/app_theme.dart';
 import 'login.dart';
+import '../../widgets/docs_dialogs.dart';
+import '../../models/user_model.dart' as app_user;
+import '../../services/firestore_service.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -55,8 +60,8 @@ class _RegisterState extends State<Register> {
         child: SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              // maxWidth: 400, // Responsive max width for desktop/tablet
-            ),
+                // maxWidth: 400, // Responsive max width for desktop/tablet
+                ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Form(
@@ -191,6 +196,7 @@ class _RegisterState extends State<Register> {
                               TextButton(
                                 onPressed: () {
                                   // Show terms
+                                  showTermsDialog(context);
                                 },
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
@@ -238,18 +244,40 @@ class _RegisterState extends State<Register> {
 
                           try {
                             // Firebase Authentication logic to register the user
-                            await FirebaseAuth.instance
+                            UserCredential userCredential = await FirebaseAuth.instance
                                 .createUserWithEmailAndPassword(
                               email: email,
                               password: password,
                             );
 
+                            if (userCredential.user != null) {
+                              final newUser = app_user.User(
+                                uid: userCredential.user!.uid,
+                                email: email,
+                                fullName: "", // Will be updated in the 'About You' screen
+                                createdAt: Timestamp.now(),
+                                profilePicUrl: null,
+                                gender: null,
+                                age: null,
+                                interests: [], // Empty list for interests
+                                verificationLevel: 1, // Default to Basic verification
+                                chatPreferences: app_user.ChatPreferences(
+                                  matchWithGender: "Any",
+                                  minAge: 0,
+                                  maxAge: 0,
+                                  onlyVerified: false,
+                                ),
+                                privacySettings: app_user.PrivacySettings(
+                                  showProfilePicToFriends: true,
+                                  showProfilePicToStrangers: false,
+                                ),
+                              );
+
+                              await FirestoreService().createUser(newUser);
+                            }
+
                             // Navigate to the next page after successful registration
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => HomePageFrame()),
-                            );
+                            _navigateToAbout(context);
                           } on FirebaseAuthException catch (e) {
                             String errorMessage =
                                 "Registration failed. Please try again.";
@@ -426,6 +454,16 @@ class _RegisterState extends State<Register> {
           ),
         );
       },
+    );
+  }
+
+  void _navigateToAbout(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (context) => EditInformation(
+                editType: 'about',
+              )),
     );
   }
 
