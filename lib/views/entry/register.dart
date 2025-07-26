@@ -457,7 +457,15 @@ class _RegisterState extends State<Register> {
     );
   }
 
-  void _navigateToAbout(BuildContext context) {
+  void _navigateToAbout(BuildContext context) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final userDoc = await FirestoreService().getUser(currentUser.uid);
+      if (userDoc.exists) {
+        final user = app_user.User.fromJson(userDoc.data()!);
+        await app_user.User.saveToPrefs(user);
+      }
+    }
     Navigator.push(
       context,
       MaterialPageRoute(

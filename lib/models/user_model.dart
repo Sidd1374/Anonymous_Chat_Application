@@ -14,7 +14,7 @@ class User {
   final Timestamp? createdAt;
   final String? profilePicUrl;
   final String? gender;
-  final int? age;
+  final String? age;
   final List<String>? interests;
   final int? verificationLevel;
   final ChatPreferences? chatPreferences;
@@ -35,14 +35,18 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final uid = json['uid'] as String?;
+    if (uid == null) {
+      throw FormatException('Missing or null UID in user data');
+    }
     return User(
-      uid: json['uid'] as String,
+      uid: uid,
       email: json['email'] as String,
       fullName: json['fullName'] as String,
       createdAt: json['createdAt'] as Timestamp?,
       profilePicUrl: json['profilePicUrl'] as String?,
       gender: json['gender'] as String?,
-      age: json['age'] as int?,
+      age: json['age'] != null ? json['age'].toString() : null,
       interests: (json['interests'] as List<dynamic>?)?.map((e) => e as String).toList(),
       verificationLevel: json['verificationLevel'] as int?,
       chatPreferences: json['chatPreferences'] != null
@@ -73,15 +77,30 @@ class User {
   // Save user to SharedPreferences
   static Future<void> saveToPrefs(User user) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_data', jsonEncode(user.toJson()));
+    final userDataJson = jsonEncode(user.toJson());
+    print('Saving user data to SharedPreferences: $userDataJson');
+    await prefs.setString('user_data', userDataJson);
   }
 
   // Retrieve user from SharedPreferences
   static Future<User?> getFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final userData = prefs.getString('user_data');
+    print('Retrieved user data from SharedPreferences: $userData');
     if (userData == null) return null;
-    return User.fromJson(jsonDecode(userData));
+    try {
+      final decodedData = jsonDecode(userData);
+      print('Decoded user data: $decodedData');
+      final user = User.fromJson(decodedData);
+      print('User object from SharedPreferences: ${user.uid}');
+      return user;
+    } catch (e) {
+      // Log the error for debugging, but don't crash the app
+      print('Error decoding user data from SharedPreferences: $e');
+      // Clear invalid data to prevent future errors
+      await prefs.remove('user_data');
+      return null;
+    }
   }
 
   // Remove user from SharedPreferences (logout)
@@ -94,21 +113,22 @@ class User {
   static Future<void> saveProfileDetails({
     required String fullName,
     required String gender,
-    required int age,
+    required String age,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_fullName', fullName);
     await prefs.setString('user_gender', gender);
-    await prefs.setInt('user_age', age);
+    await prefs.setString('user_age', age);
   }
 
   // Retrieve name, age, and gender from SharedPreferences
   static Future<Map<String, dynamic>> getProfileDetails() async {
     final prefs = await SharedPreferences.getInstance();
+    final dynamic savedAge = prefs.get('user_age'); // Use get() to retrieve any type
     return {
       'fullName': prefs.getString('user_fullName'),
       'gender': prefs.getString('user_gender'),
-      'age': prefs.getInt('user_age'),
+      'age': savedAge != null ? savedAge.toString() : null, // Convert to String if not null
     };
   }
 

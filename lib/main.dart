@@ -4,7 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 // import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:veil_chat_application/services/firestore_service.dart';
+import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/container.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User; // Add hide User
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
 
@@ -21,13 +24,41 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Check if user data is stored
+  // Check if user data is stored in SharedPreferences
   final storedUser = await User.getFromPrefs();
+
+  // Check Firebase Authentication state
+  final firebaseUser = FirebaseAuth.instance.currentUser;
+
+  // If Firebase user exists but SharedPreferences user doesn't,
+  // try to fetch user data from Firestore and save to SharedPreferences
+  if (firebaseUser != null && storedUser == null) {
+    try {
+      final userDoc = await FirestoreService().getUser(firebaseUser.uid);
+      if (userDoc.exists) {
+        final user = User.fromJson(userDoc.data()!);
+        await User.saveToPrefs(user);
+        print('Synchronized user data from Firestore to SharedPreferences.');
+      } else {
+        print('Firebase user exists, but no corresponding data in Firestore. Logging out.');
+        await FirebaseAuth.instance.signOut();
+        await User.clearFromPrefs();
+      }
+    } catch (e) {
+      print('Error synchronizing user data: $e');
+      await FirebaseAuth.instance.signOut();
+      await User.clearFromPrefs();
+    }
+  }
 
   // First time run check provider
   final prefs = await SharedPreferences.getInstance();
   final isFirstRun = prefs.getBool('isFirstRun') ?? true;
 
+  // Determine if the user is logged in based on either SharedPreferences or Firebase Auth
+  final isLoggedIn = storedUser != null || firebaseUser != null;
+
+  print('Is user logged in (from SharedPreferences or Firebase Auth): $isLoggedIn');
   // Starting the App with DevicePreview
   runApp(
     DevicePreview(
@@ -74,7 +105,9 @@ class MyApp extends StatelessWidget {
                     // useInheritedMediaQuery: true,
 
                     // home: isLoggedIn ? HomePageFrame() : Welcome(),
-                    home: HomePageFrame(),
+                    home: isLoggedIn
+                        ? HomePageFrame()
+                        : (isFirstRun ? Welcome() : HomePageFrame()),
                   );
                 },
               );

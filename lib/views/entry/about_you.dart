@@ -518,7 +518,7 @@ class _EditInformationState extends State<EditInformation> {
         await mymodel.User.saveProfileDetails(
           fullName: _nameController.text.trim(),
           gender: _selectedGender,
-          age: age,
+          age: _ageController.text.trim(),
         );
 
         // Save interests to SharedPreferences

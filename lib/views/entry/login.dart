@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:veil_chat_application/services/firestore_service.dart';
+import 'package:veil_chat_application/views/home/container.dart';
 
 import '../../core/app_theme.dart';
 import 'register.dart';
@@ -344,15 +346,31 @@ class _LoginState extends State<Login> {
         // If you want to save user data, implement the saveToPrefs method in your User class.
         // Example:
         print("User logged in: ${userCredential.user?.uid}");
-        _navigateToHome(context);
-      } on FirebaseAuthException catch (e) {
-        String message = 'Login failed';
-        if (e.code == 'user-not-found') {
-          message = 'No user found for that email.';
-        } else if (e.code == 'wrong-password') {
-          message = 'Wrong password.';
-        }
-        _showErrorDialog(message);
+        //   if (userCredential.user != null) {
+        //     final userDoc = await FirestoreService().getUser(userCredential.user!.uid);
+        //     if (userDoc.exists) {
+        //       final user = mymodel.User.fromJson(userDoc.data()!);
+        //       await mymodel.User.saveToPrefs(user);
+        //       Navigator.pushReplacement(
+        //         context,
+        //         MaterialPageRoute(builder: (context) => HomePageFrame()),
+        //       );
+        //     } else {
+        //       _showErrorDialog("User data not found in Firestore.");
+        //     }
+        //   }
+        // } on FirebaseAuthException catch (e) {
+        //   String message = 'Login failed';
+        //   if (e.code == 'user-not-found') {
+        //     message = 'No user found for that email.';
+        //   } else if (e.code == 'wrong-password') {
+        //     message = 'Wrong password.';
+        //   }
+        //   _showErrorDialog(message);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePageFrame()),
+        );
       } catch (e) {
         _showErrorDialog("Something went wrong.");
       }

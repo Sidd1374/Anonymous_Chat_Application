@@ -215,7 +215,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
       await mymodel.User.saveProfileDetails(
         fullName: _name,
         gender: _gender,
-        age: _age, // Convert int back to string for saving
+        age: _age.toString(), // Convert int back to string for saving
       );
     }
   }
