@@ -1,9 +1,13 @@
+// lib/views/home/profile.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:veil_chat_application/views/entry/about_you.dart';
+// Import the new EditProfilePage
+import 'package:veil_chat_application/views/home/edit_profile_page.dart'; // <--- ADD THIS LINE
 
 class ProfileLvl1 extends StatefulWidget {
   const ProfileLvl1({super.key});
@@ -13,7 +17,8 @@ class ProfileLvl1 extends StatefulWidget {
 }
 
 class _ProfileLvl1State extends State<ProfileLvl1> {
-  final List<String> _interests = [
+  // Make _interests mutable as it will be updated from EditProfilePage
+  List<String> _interests = [
     'Gaming',
     'Music',
     'Photo / Video Editing',
@@ -35,19 +40,38 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    mymodel.User.getProfileDetails().then((user) {
-      setState(() {
-        _name = user['fullName'] ?? '';
-        _gender = user['gender'] ?? '';
-        _age = int.tryParse(user['age'] ?? '0') ?? 0;
-        _profileImagePath = prefs.getString('profile_image_path');
-      });
+    // Retrieve basic profile details
+    final profileDetails = await mymodel.User.getProfileDetails();
+    setState(() {
+      _name = profileDetails['fullName'] ?? '';
+      _gender = profileDetails['gender'] ?? '';
+      _age = int.tryParse(profileDetails['age'] ?? '0') ?? 0;
+      _profileImagePath = prefs.getString('profile_image_path');
+
+      // Load interests from SharedPreferences if saved. Assuming 'user_interests' key
+      final savedInterests = prefs.getStringList('user_interests');
+      if (savedInterests != null) {
+        _interests = savedInterests;
+      }
     });
   }
+
+  // Helper to save interests list to SharedPreferences
+  Future<void> _saveInterestsToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('user_interests', _interests);
+  }
+
+  // NOTE: The _addInterest and _showAddInterestDialog methods are primarily
+  // for the EditProfilePage now. If you still want to allow adding interests
+  // directly from ProfileLvl1 (e.g., if you re-add the "Edit Interests" button here),
+  // you can keep them. For a clean flow, the intention is to edit interests
+  // via the EditProfilePage. So, I'll keep them here for now just in case.
 
   void _addInterest(String interest) {
     setState(() {
       _interests.add(interest);
+      _saveInterestsToPrefs(); // Save changes immediately
     });
   }
 
@@ -89,33 +113,41 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   }
 
   void _showEditInterestDialog() {
+    // This logic is mostly duplicated in EditProfilePage.
+    // Consider if this button should still exist on ProfileLvl1 or if editing is exclusively via EditProfilePage.
+    // If it stays, it directly modifies _interests and saves.
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Edit Interests'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _interests.length,
-              itemBuilder: (context, index) {
-                final interest = _interests[index];
-                return ListTile(
-                  title: Text(interest),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      setState(() {
-                        _interests.removeAt(index);
-                      });
-                      Navigator.of(context).pop();
-                      _showEditInterestDialog(); // Reopen dialog to reflect changes
-                    },
-                  ),
-                );
-              },
-            ),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setStateInsideDialog) {
+              return SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _interests.length,
+                  itemBuilder: (context, index) {
+                    final interest = _interests[index];
+                    return ListTile(
+                      title: Text(interest),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          setState(() {
+                            _interests.removeAt(index);
+                          });
+                          _saveInterestsToPrefs(); // Save changes immediately
+                          setStateInsideDialog(
+                              () {}); // Rebuild only the dialog content
+                        },
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
           actions: [
             TextButton(
@@ -137,15 +169,54 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     );
   }
 
-  Future<void> _editProfileImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      final savedPath =
-          await mymodel.User.saveProfileImageLocally(File(pickedFile.path));
+  // Future<void> _editProfileImage() async {
+  //   final picker = ImagePicker();
+  //   final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+  //   if (pickedFile != null) {
+  //     final savedPath =
+  //         await mymodel.User.saveProfileImageLocally(File(pickedFile.path));
+  //     setState(() {
+  //       _profileImagePath = savedPath;
+  //     });
+  //   }
+  // }
+
+  // --- New: Function to navigate to EditProfilePage and handle returned data ---
+  Future<void> _navigateToEditProfile() async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => EditInformation(
+                  editType: 'Edit Profile',
+                ))
+        // MaterialPageRoute(
+        //   builder: (context) => EditProfilePage(
+        //     initialName: _name,
+        //     initialGender: _gender,
+        //     initialAge: _age,
+        //     initialInterests: List.from(_interests), // Pass a copy of the list
+        //   ),
+        // ),
+        );
+
+    // If data was returned from EditProfilePage (i.e., user saved changes)
+    if (result != null && result is Map<String, dynamic>) {
       setState(() {
-        _profileImagePath = savedPath;
+        _name = result['fullName'] as String;
+        _gender = result['gender'] as String;
+        _age = result['age'] as int;
+        // Update interests if they were changed
+        if (result.containsKey('interests') && result['interests'] is List) {
+          _interests = List<String>.from(result['interests']);
+          _saveInterestsToPrefs(); // Save updated interests to prefs
+        }
       });
+      // Also save basic profile details to SharedPreferences
+      await mymodel.User.saveProfileDetails(
+        fullName: _name,
+        gender: _gender,
+        age: _age, // Convert int back to string for saving
+      );
     }
   }
 
@@ -160,12 +231,22 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         iconTheme: theme.appBarTheme.iconTheme,
         titleTextStyle: theme.appBarTheme.titleTextStyle,
+        // Add an Edit button to the AppBar
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed:
+                _navigateToEditProfile, // Call the new navigation function
+          ),
+          const SizedBox(width: 8), // Add a little spacing if needed
+        ],
       ),
       body: Center(
         child: SingleChildScrollView(
           child: Column(
             children: [
               Container(
+                // Consider making this width responsive, e.g., using MediaQuery.of(context).size.width * 0.9
                 width: 392,
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
@@ -181,47 +262,68 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                 ),
                 child: Column(
                   children: [
-                    // Profile Picture with Edit Button (Plus Icon)
-                    Stack(
-                      alignment: Alignment.bottomRight,
-                      children: [
-                        Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: theme.primaryColor,
-                              width: 2,
-                            ),
-                            image: _profileImagePath != null &&
-                                    _profileImagePath!.isNotEmpty &&
-                                    File(_profileImagePath!).existsSync()
-                                ? DecorationImage(
-                                    image: FileImage(File(_profileImagePath!)),
-                                    fit: BoxFit.cover,
-                                  )
-                                : const DecorationImage(
-                                    image: AssetImage('assets/Profile_image.png'),
-                                    fit: BoxFit.cover,
-                                  ),
+                    Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.primaryColor,
+                          width: 2,
                         ),
-                        ),
-                        GestureDetector(
-                          onTap: _editProfileImage,
-                          child: CircleAvatar(
-                            radius: 22,
-                            backgroundColor: theme.primaryColor,
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                        
-                      ],
+                        image: _profileImagePath != null &&
+                                _profileImagePath!.isNotEmpty &&
+                                File(_profileImagePath!).existsSync()
+                            ? DecorationImage(
+                                image: FileImage(File(_profileImagePath!)),
+                                fit: BoxFit.cover,
+                              )
+                            : const DecorationImage(
+                                image: AssetImage('assets/Profile_image.png'),
+                                fit: BoxFit.cover,
+                              ),
+                      ),
                     ),
+                    // Profile Picture with Edit Button (Plus Icon)
+                    // Stack(
+                    //   alignment: Alignment.bottomRight,
+                    //   children: [
+                    //     Container(
+                    //       width: 150,
+                    //       height: 150,
+                    //       decoration: BoxDecoration(
+                    //         shape: BoxShape.circle,
+                    //         border: Border.all(
+                    //           color: theme.primaryColor,
+                    //           width: 2,
+                    //         ),
+                    //         image: _profileImagePath != null &&
+                    //                 _profileImagePath!.isNotEmpty &&
+                    //                 File(_profileImagePath!).existsSync()
+                    //             ? DecorationImage(
+                    //                 image: FileImage(File(_profileImagePath!)),
+                    //                 fit: BoxFit.cover,
+                    //               )
+                    //             : const DecorationImage(
+                    //                 image: AssetImage('assets/Profile_image.png'),
+                    //                 fit: BoxFit.cover,
+                    //               ),
+                    //       ),
+                    //     ),
+                    //     GestureDetector(
+                    //       onTap: _editProfileImage,
+                    //       child: CircleAvatar(
+                    //         radius: 22,
+                    //         backgroundColor: theme.primaryColor,
+                    //         child: const Icon(
+                    //           Icons.add,
+                    //           color: Colors.white,
+                    //           size: 24,
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                     const SizedBox(height: 20),
                     // User Information
                     Text(
@@ -251,17 +353,10 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           .toList(),
                     ),
                     const SizedBox(height: 20),
-                    // Edit Interests Button
-                    TextButton(
-                      onPressed: _showEditInterestDialog,
-                      child: Text(
-                        'Edit Interests',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.primaryColor,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
+                    // The "Edit Interests" button that was here is now primarily
+                    // located on the EditProfilePage for a more streamlined editing flow.
+                    // If you want it here as well, ensure it just calls _showEditInterestDialog()
+                    // and handles the list update.
                     const SizedBox(height: 30),
                     // Level Information
                     Text(

@@ -44,7 +44,7 @@ class AppRoutes {
         register: (context) => const Register(),
         login: (context) => const Login(),
         // verifyOtp: (context) => VerifyOtp(),
-        aboutYou: (context) => const EditInformation(),
+        // aboutYou: (context) => const EditInformation(),
         // faceVerification: (context) => const FaceVerification(),
         // profileCreated: (context) => const ProfileCreated(),
         aadhaarVerification: (context) => AadhaarVerification(),

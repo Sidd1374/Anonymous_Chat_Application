@@ -279,7 +279,8 @@ class _LoginState extends State<Login> {
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => EditInformation()),
+                                      builder: (context) =>
+                                          EditInformation(editType: 'About')),
                                 );
                               } catch (e) {
                                 _showErrorDialog(
@@ -316,7 +317,10 @@ class _LoginState extends State<Login> {
   void _navigateToHome(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => EditInformation()),
+      MaterialPageRoute(
+          builder: (context) => EditInformation(
+                editType: 'about',
+              )),
     );
   }
 
@@ -339,13 +343,6 @@ class _LoginState extends State<Login> {
         // Save user data to SharedPreferences or any other storage if needed
         // If you want to save user data, implement the saveToPrefs method in your User class.
         // Example:
-        final user = mymodel.User(
-          email: email,
-          fullName: '',
-          password: password,
-        );
-        await mymodel.User.saveToPrefs(user);
-
         print("User logged in: ${userCredential.user?.uid}");
         _navigateToHome(context);
       } on FirebaseAuthException catch (e) {
