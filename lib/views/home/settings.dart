@@ -63,12 +63,12 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildProfileCard(ThemeData theme) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ProfileLvl1(),
-          ),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => ProfileLvl1(),
+        //   ),
+        // );
       },
       child: Card(
         elevation: 4,

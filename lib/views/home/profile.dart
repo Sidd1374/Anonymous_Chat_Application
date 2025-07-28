@@ -4,55 +4,47 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
-// Import the new EditProfilePage
-import 'package:veil_chat_application/views/home/edit_profile_page.dart'; // <--- ADD THIS LINE
 
 class ProfileLvl1 extends StatefulWidget {
-  const ProfileLvl1({super.key});
+  final mymodel.User user;
+  const ProfileLvl1({super.key, required this.user});
 
   @override
   _ProfileLvl1State createState() => _ProfileLvl1State();
 }
 
 class _ProfileLvl1State extends State<ProfileLvl1> {
-  // Make _interests mutable as it will be updated from EditProfilePage
-  List<String> _interests = [
-    'Gaming',
-    'Music',
-    'Photo / Video Editing',
-    'Sports',
-    'Photography',
-    'Graphic Designing',
-  ];
-
-  String _name = '';
-  String _gender = '';
-  int _age = 0;
-  String? _profileImagePath;
+  // These variables will hold the profile data.
+  late String _name;
+  late String _gender;
+  late int _age;
+  late String? _profileImagePath;
+  late List<String> _interests;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _initializeStateFromWidget();
   }
 
-  Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Retrieve basic profile details
-    final profileDetails = await mymodel.User.getProfileDetails();
-    setState(() {
-      _name = profileDetails['fullName'] ?? '';
-      _gender = profileDetails['gender'] ?? '';
-      _age = int.tryParse(profileDetails['age'] ?? '0') ?? 0;
-      _profileImagePath = prefs.getString('profile_image_path');
+  @override
+  void didUpdateWidget(ProfileLvl1 oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the user object passed to the widget changes, re-initialize the state.
+    if (widget.user != oldWidget.user) {
+      _initializeStateFromWidget();
+    }
+  }
 
-      // Load interests from SharedPreferences if saved. Assuming 'user_interests' key
-      final savedInterests = prefs.getStringList('user_interests');
-      if (savedInterests != null) {
-        _interests = savedInterests;
-      }
+  // Helper method to set state from the widget's user property.
+  void _initializeStateFromWidget() {
+    setState(() {
+      _name = widget.user.fullName;
+      _gender = widget.user.gender ?? '';
+      _age = int.tryParse(widget.user.age ?? '0') ?? 0;
+      _profileImagePath = widget.user.profilePicUrl;
+      _interests = widget.user.interests ?? [];
     });
   }
 
@@ -61,12 +53,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('user_interests', _interests);
   }
-
-  // NOTE: The _addInterest and _showAddInterestDialog methods are primarily
-  // for the EditProfilePage now. If you still want to allow adding interests
-  // directly from ProfileLvl1 (e.g., if you re-add the "Edit Interests" button here),
-  // you can keep them. For a clean flow, the intention is to edit interests
-  // via the EditProfilePage. So, I'll keep them here for now just in case.
 
   void _addInterest(String interest) {
     setState(() {
@@ -113,9 +99,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   }
 
   void _showEditInterestDialog() {
-    // This logic is mostly duplicated in EditProfilePage.
-    // Consider if this button should still exist on ProfileLvl1 or if editing is exclusively via EditProfilePage.
-    // If it stays, it directly modifies _interests and saves.
     showDialog(
       context: context,
       builder: (context) {
@@ -169,54 +152,25 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     );
   }
 
-  // Future<void> _editProfileImage() async {
-  //   final picker = ImagePicker();
-  //   final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-  //   if (pickedFile != null) {
-  //     final savedPath =
-  //         await mymodel.User.saveProfileImageLocally(File(pickedFile.path));
-  //     setState(() {
-  //       _profileImagePath = savedPath;
-  //     });
-  //   }
-  // }
-
-  // --- New: Function to navigate to EditProfilePage and handle returned data ---
   Future<void> _navigateToEditProfile() async {
-    final result = await Navigator.push(
+    // Navigate to the edit page and wait for a result.
+    await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => EditInformation(
                   editType: 'Edit Profile',
-                ))
-        // MaterialPageRoute(
-        //   builder: (context) => EditProfilePage(
-        //     initialName: _name,
-        //     initialGender: _gender,
-        //     initialAge: _age,
-        //     initialInterests: List.from(_interests), // Pass a copy of the list
-        //   ),
-        // ),
-        );
+                )));
 
-    // If data was returned from EditProfilePage (i.e., user saved changes)
-    if (result != null && result is Map<String, dynamic>) {
+    // After returning, reload the user data from SharedPreferences to reflect any changes.
+    final updatedUser = await mymodel.User.getFromPrefs();
+    if (updatedUser != null) {
       setState(() {
-        _name = result['fullName'] as String;
-        _gender = result['gender'] as String;
-        _age = result['age'] as int;
-        // Update interests if they were changed
-        if (result.containsKey('interests') && result['interests'] is List) {
-          _interests = List<String>.from(result['interests']);
-          _saveInterestsToPrefs(); // Save updated interests to prefs
-        }
+        _name = updatedUser.fullName;
+        _gender = updatedUser.gender ?? '';
+        _age = int.tryParse(updatedUser.age ?? '0') ?? 0;
+        _profileImagePath = updatedUser.profilePicUrl;
+        _interests = updatedUser.interests ?? [];
       });
-      // Also save basic profile details to SharedPreferences
-      await mymodel.User.saveProfileDetails(
-        fullName: _name,
-        gender: _gender,
-        age: _age.toString(), // Convert int back to string for saving
-      );
     }
   }
 
@@ -231,14 +185,13 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         iconTheme: theme.appBarTheme.iconTheme,
         titleTextStyle: theme.appBarTheme.titleTextStyle,
-        // Add an Edit button to the AppBar
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed:
-                _navigateToEditProfile, // Call the new navigation function
+                _navigateToEditProfile,
           ),
-          const SizedBox(width: 8), // Add a little spacing if needed
+          const SizedBox(width: 8),
         ],
       ),
       body: Center(
@@ -246,7 +199,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
           child: Column(
             children: [
               Container(
-                // Consider making this width responsive, e.g., using MediaQuery.of(context).size.width * 0.9
                 width: 392,
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
@@ -284,48 +236,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                               ),
                       ),
                     ),
-                    // Profile Picture with Edit Button (Plus Icon)
-                    // Stack(
-                    //   alignment: Alignment.bottomRight,
-                    //   children: [
-                    //     Container(
-                    //       width: 150,
-                    //       height: 150,
-                    //       decoration: BoxDecoration(
-                    //         shape: BoxShape.circle,
-                    //         border: Border.all(
-                    //           color: theme.primaryColor,
-                    //           width: 2,
-                    //         ),
-                    //         image: _profileImagePath != null &&
-                    //                 _profileImagePath!.isNotEmpty &&
-                    //                 File(_profileImagePath!).existsSync()
-                    //             ? DecorationImage(
-                    //                 image: FileImage(File(_profileImagePath!)),
-                    //                 fit: BoxFit.cover,
-                    //               )
-                    //             : const DecorationImage(
-                    //                 image: AssetImage('assets/Profile_image.png'),
-                    //                 fit: BoxFit.cover,
-                    //               ),
-                    //       ),
-                    //     ),
-                    //     GestureDetector(
-                    //       onTap: _editProfileImage,
-                    //       child: CircleAvatar(
-                    //         radius: 22,
-                    //         backgroundColor: theme.primaryColor,
-                    //         child: const Icon(
-                    //           Icons.add,
-                    //           color: Colors.white,
-                    //           size: 24,
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ],
-                    // ),
                     const SizedBox(height: 20),
-                    // User Information
                     Text(
                       _name.isNotEmpty ? _name : 'Name not set',
                       style: theme.textTheme.titleLarge?.copyWith(
@@ -343,7 +254,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 30),
-                    // Interests Section
                     Wrap(
                       alignment: WrapAlignment.center,
                       spacing: 10,
@@ -352,13 +262,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           .map((interest) => _buildInterestTag(interest, theme))
                           .toList(),
                     ),
-                    const SizedBox(height: 20),
-                    // The "Edit Interests" button that was here is now primarily
-                    // located on the EditProfilePage for a more streamlined editing flow.
-                    // If you want it here as well, ensure it just calls _showEditInterestDialog()
-                    // and handles the list update.
                     const SizedBox(height: 30),
-                    // Level Information
                     Text(
                       'Level 1: Basic',
                       style: theme.textTheme.titleLarge?.copyWith(
@@ -378,7 +282,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 30),
-                    // Verify Button
                     ElevatedButton(
                       onPressed: () {
                         Navigator.push(

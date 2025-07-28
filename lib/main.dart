@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/container.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide User; // Add hide User
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
 import 'views/entry/login.dart';
@@ -25,32 +25,6 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Check if user data is stored in SharedPreferences
-  // final storedUser = await User.getFromPrefs();
-
-  // Check Firebase Authentication state
-  // final firebaseUser = FirebaseAuth.instance.currentUser;
-
-  // If Firebase user exists but SharedPreferences user doesn't,
-  // try to fetch user data from Firestore and save to SharedPreferences
-  // if (firebaseUser != null && storedUser == null) {
-  //   try {
-  //     final userDoc = await FirestoreService().getUser(firebaseUser.uid);
-  //     if (userDoc.exists) {
-  //       final user = User.fromJson(userDoc.data()!);
-  //       await User.saveToPrefs(user);
-  //       print('Synchronized user data from Firestore to SharedPreferences.');
-  //     } else {
-  //       print('Firebase user exists, but no corresponding data in Firestore. Logging out.');
-  //       await FirebaseAuth.instance.signOut();
-  //       await User.clearFromPrefs();
-  //     }
-  //   } catch (e) {
-  //     print('Error synchronizing user data: $e');
-  //     await FirebaseAuth.instance.signOut();
-  //     await User.clearFromPrefs();
-  //   }
-  // }
 
   // First time run check provider
   final prefs = await SharedPreferences.getInstance();
