@@ -1,4 +1,3 @@
-// lib/views/home/profile.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +14,6 @@ class ProfileLvl1 extends StatefulWidget {
 }
 
 class _ProfileLvl1State extends State<ProfileLvl1> {
-  // These variables will hold the profile data.
   late String _name;
   late String _gender;
   late int _age;
@@ -31,13 +29,11 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   @override
   void didUpdateWidget(ProfileLvl1 oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // If the user object passed to the widget changes, re-initialize the state.
     if (widget.user != oldWidget.user) {
       _initializeStateFromWidget();
     }
   }
 
-  // Helper method to set state from the widget's user property.
   void _initializeStateFromWidget() {
     setState(() {
       _name = widget.user.fullName;
@@ -48,130 +44,17 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     });
   }
 
-  // Helper to save interests list to SharedPreferences
-  Future<void> _saveInterestsToPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('user_interests', _interests);
-  }
-
-  void _addInterest(String interest) {
-    setState(() {
-      _interests.add(interest);
-      _saveInterestsToPrefs(); // Save changes immediately
-    });
-  }
-
-  void _showAddInterestDialog() {
-    final TextEditingController interestController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add Interest'),
-          content: TextField(
-            controller: interestController,
-            decoration: const InputDecoration(
-              hintText: 'Enter your interest',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final interest = interestController.text.trim();
-                if (interest.isNotEmpty) {
-                  _addInterest(interest);
-                }
-                Navigator.of(context).pop();
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showEditInterestDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Interests'),
-          content: StatefulBuilder(
-            builder: (BuildContext context, StateSetter setStateInsideDialog) {
-              return SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _interests.length,
-                  itemBuilder: (context, index) {
-                    final interest = _interests[index];
-                    return ListTile(
-                      title: Text(interest),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          setState(() {
-                            _interests.removeAt(index);
-                          });
-                          _saveInterestsToPrefs(); // Save changes immediately
-                          setStateInsideDialog(
-                              () {}); // Rebuild only the dialog content
-                        },
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showAddInterestDialog();
-              },
-              child: const Text('Add Interest'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Done'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _navigateToEditProfile() async {
-    // Navigate to the edit page and wait for a result.
     await Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => EditInformation(
-                  editType: 'Edit Profile',
-                )));
-
-    // After returning, reload the user data from SharedPreferences to reflect any changes.
-    final updatedUser = await mymodel.User.getFromPrefs();
-    if (updatedUser != null) {
-      setState(() {
-        _name = updatedUser.fullName;
-        _gender = updatedUser.gender ?? '';
-        _age = int.tryParse(updatedUser.age ?? '0') ?? 0;
-        _profileImagePath = updatedUser.profilePicUrl;
-        _interests = updatedUser.interests ?? [];
-      });
-    }
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditInformation(
+          editType: 'Edit Profile',
+        ),
+      ),
+    );
+    // After returning from the edit page, we don't need to do anything here
+    // because the SettingsPage will handle refreshing the data.
   }
 
   @override
@@ -188,8 +71,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed:
-                _navigateToEditProfile,
+            onPressed: _navigateToEditProfile,
           ),
           const SizedBox(width: 8),
         ],

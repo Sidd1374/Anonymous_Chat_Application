@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/welcome.dart';
-import 'package:veil_chat_application/views/home/profile.dart';
+import 'package:veil_chat_application/views/home/settings.dart';
 import '../../core/app_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'homepage.dart';
 import 'friends_list.dart';
 import 'history.dart';
-import 'settings.dart';
-// import '../../views/test_1.dart';
+// import 'settings_page.dart'; // Import the new settings page
 
 class HomePageFrame extends StatefulWidget {
   const HomePageFrame({super.key});
@@ -22,22 +20,12 @@ class HomePageFrame extends StatefulWidget {
 
 class _HomePageFrameState extends State<HomePageFrame> {
   int _selectedIndex = 0;
-  mymodel.User? _user;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    final user = await mymodel.User.getFromPrefs();
-    if (mounted) {
-      setState(() {
-        _user = user;
-      });
-    }
-  }
+  static final List<Widget> _widgetOptions = <Widget>[
+    HomePage(),
+    FriendsPage(),
+    History(),
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -48,19 +36,6 @@ class _HomePageFrameState extends State<HomePageFrame> {
   @override
   Widget build(BuildContext context) {
     final appTheme = context.watch<AppTheme>();
-
-    // The list of widgets is now built inside the build method
-    // to include the profile page conditionally.
-    final List<Widget> _widgetOptions = <Widget>[
-      HomePage(),
-      FriendsPage(),
-      History(),
-      // Show a loading indicator while user data is being fetched,
-      // or the profile page if data is available.
-      _user != null
-          ? ProfileLvl1(user: _user!)
-          : const Center(child: CircularProgressIndicator()),
-    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -188,23 +163,6 @@ class _HomePageFrameState extends State<HomePageFrame> {
                             ?.color),
                     label: 'History',
                     tooltip: 'Strangers You Met',
-                  ),
-                  // Added the Profile destination
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline,
-                        size: 28,
-                        color: Theme.of(context)
-                            .bottomNavigationBarTheme
-                            .unselectedIconTheme
-                            ?.color),
-                    selectedIcon: Icon(Icons.person,
-                        size: 32,
-                        color: Theme.of(context)
-                            .bottomNavigationBarTheme
-                            .selectedIconTheme
-                            ?.color),
-                    label: 'Profile',
-                    tooltip: 'Your Profile',
                   ),
                 ],
               ),
