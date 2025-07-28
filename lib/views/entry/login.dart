@@ -316,16 +316,6 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  void _navigateToHome(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => EditInformation(
-                editType: 'about',
-              )),
-    );
-  }
-
   void _navigateToRegister(BuildContext context) {
     Navigator.push(
       context,
@@ -334,48 +324,63 @@ class _LoginState extends State<Login> {
   }
 
   Future<void> _loginUser() async {
+    // if (_formKey.currentState!.validate()) {
+    //   try {
+    //     final email = emailController.text.trim();
+    //     final password = passwordController.text;
+
+    //     UserCredential userCredential = await FirebaseAuth.instance
+    //         .signInWithEmailAndPassword(email: email, password: password);
+
+    // Save user data to SharedPreferences or any other storage if needed
+    // If you want to save user data, implement the saveToPrefs method in your User class.
+    // Example:
     if (_formKey.currentState!.validate()) {
       try {
         final email = emailController.text.trim();
         final password = passwordController.text;
+        // print("User logged in: ${userCredential.user?.uid}");
 
         UserCredential userCredential = await FirebaseAuth.instance
             .signInWithEmailAndPassword(email: email, password: password);
 
-        // Save user data to SharedPreferences or any other storage if needed
-        // If you want to save user data, implement the saveToPrefs method in your User class.
-        // Example:
-        print("User logged in: ${userCredential.user?.uid}");
-        //   if (userCredential.user != null) {
-        //     final userDoc = await FirestoreService().getUser(userCredential.user!.uid);
-        //     if (userDoc.exists) {
-        //       final user = mymodel.User.fromJson(userDoc.data()!);
-        //       await mymodel.User.saveToPrefs(user);
-        //       Navigator.pushReplacement(
-        //         context,
-        //         MaterialPageRoute(builder: (context) => HomePageFrame()),
-        //       );
-        //     } else {
-        //       _showErrorDialog("User data not found in Firestore.");
-        //     }
-        //   }
-        // } on FirebaseAuthException catch (e) {
-        //   String message = 'Login failed';
-        //   if (e.code == 'user-not-found') {
-        //     message = 'No user found for that email.';
-        //   } else if (e.code == 'wrong-password') {
-        //     message = 'Wrong password.';
-        //   }
-        //   _showErrorDialog(message);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomePageFrame()),
-        );
+        if (userCredential.user != null) {
+          final userDoc =
+              await FirestoreService().getUser(userCredential.user!.uid);
+          if (userDoc.exists) {
+            final user = mymodel.User.fromJson(userDoc.data()!);
+            await mymodel.User.saveToPrefs(user);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomePageFrame()),
+            );
+          } else {
+            _showErrorDialog("User data not found in Firestore.");
+          }
+        }
+      } on FirebaseAuthException catch (e) {
+        String message = 'Login failed';
+        if (e.code == 'user-not-found') {
+          message = 'No user found for that email.';
+        } else if (e.code == 'wrong-password') {
+          message = 'Wrong password.';
+        }
+        _showErrorDialog(message);
       } catch (e) {
-        _showErrorDialog("Something went wrong.");
+        _showErrorDialog(e.toString());
       }
     }
   }
+
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(builder: (context) => HomePageFrame()),
+  //       );
+  //     } catch (e) {
+  //       _showErrorDialog("Something went wrong.");
+  //     }
+  //   }
+  // }
 
   void _showErrorDialog(String message) {
     showDialog(

@@ -274,6 +274,7 @@ class _RegisterState extends State<Register> {
                               );
 
                               await FirestoreService().createUser(newUser);
+                              await app_user.User.saveToPrefs(newUser);
                             }
 
                             // Navigate to the next page after successful registration

@@ -11,7 +11,7 @@ class User {
   final String uid;
   final String email;
   final String fullName;
-  final Timestamp? createdAt;
+  final Timestamp createdAt;
   final String? profilePicUrl;
   final String? gender;
   final String? age;
@@ -24,7 +24,7 @@ class User {
     required this.uid,
     required this.email,
     required this.fullName,
-    this.createdAt,
+    required this.createdAt,
     this.profilePicUrl,
     this.gender,
     this.age,
@@ -34,26 +34,45 @@ class User {
     this.privacySettings,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) {
+    factory User.fromJson(Map<String, dynamic> json) {
     final uid = json['uid'] as String?;
     if (uid == null) {
       throw FormatException('Missing or null UID in user data');
     }
+
+    dynamic createdAtData = json['createdAt'];
+    Timestamp createdAt;
+
+    if (createdAtData is Timestamp) {
+      // Data from Firestore
+      createdAt = createdAtData;
+    } else if (createdAtData is String) {
+      // Data from SharedPreferences
+      createdAt = Timestamp.fromDate(DateTime.parse(createdAtData));
+    } else {
+      // Handle case where createdAt is missing or of an unexpected type
+      throw FormatException('Invalid or missing createdAt field');
+    }
+
     return User(
       uid: uid,
       email: json['email'] as String,
       fullName: json['fullName'] as String,
-      createdAt: json['createdAt'] as Timestamp?,
+      createdAt: createdAt,
       profilePicUrl: json['profilePicUrl'] as String?,
       gender: json['gender'] as String?,
       age: json['age'] != null ? json['age'].toString() : null,
-      interests: (json['interests'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      interests: (json['interests'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
       verificationLevel: json['verificationLevel'] as int?,
       chatPreferences: json['chatPreferences'] != null
-          ? ChatPreferences.fromJson(json['chatPreferences'] as Map<String, dynamic>)
+          ? ChatPreferences.fromJson(
+              json['chatPreferences'] as Map<String, dynamic>)
           : null,
       privacySettings: json['privacySettings'] != null
-          ? PrivacySettings.fromJson(json['privacySettings'] as Map<String, dynamic>)
+          ? PrivacySettings.fromJson(
+              json['privacySettings'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -63,8 +82,7 @@ class User {
       'uid': uid,
       'email': email,
       'fullName': fullName,
-      'createdAt': createdAt,
-      'profilePicUrl': profilePicUrl,
+      'createdAt': createdAt.toDate().toIso8601String(), // Convert Timestamp to String      'profilePicUrl': profilePicUrl,
       'gender': gender,
       'age': age,
       'interests': interests,

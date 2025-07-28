@@ -10,6 +10,7 @@ import 'package:veil_chat_application/views/home/container.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User; // Add hide User
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
+import 'views/entry/login.dart';
 
 import 'package:device_preview/device_preview.dart';
 // import 'package:flutter/foundation.dart';
@@ -25,39 +26,38 @@ void main() async {
   );
 
   // Check if user data is stored in SharedPreferences
-  final storedUser = await User.getFromPrefs();
+  // final storedUser = await User.getFromPrefs();
 
   // Check Firebase Authentication state
-  final firebaseUser = FirebaseAuth.instance.currentUser;
+  // final firebaseUser = FirebaseAuth.instance.currentUser;
 
   // If Firebase user exists but SharedPreferences user doesn't,
   // try to fetch user data from Firestore and save to SharedPreferences
-  if (firebaseUser != null && storedUser == null) {
-    try {
-      final userDoc = await FirestoreService().getUser(firebaseUser.uid);
-      if (userDoc.exists) {
-        final user = User.fromJson(userDoc.data()!);
-        await User.saveToPrefs(user);
-        print('Synchronized user data from Firestore to SharedPreferences.');
-      } else {
-        print('Firebase user exists, but no corresponding data in Firestore. Logging out.');
-        await FirebaseAuth.instance.signOut();
-        await User.clearFromPrefs();
-      }
-    } catch (e) {
-      print('Error synchronizing user data: $e');
-      await FirebaseAuth.instance.signOut();
-      await User.clearFromPrefs();
-    }
-  }
+  // if (firebaseUser != null && storedUser == null) {
+  //   try {
+  //     final userDoc = await FirestoreService().getUser(firebaseUser.uid);
+  //     if (userDoc.exists) {
+  //       final user = User.fromJson(userDoc.data()!);
+  //       await User.saveToPrefs(user);
+  //       print('Synchronized user data from Firestore to SharedPreferences.');
+  //     } else {
+  //       print('Firebase user exists, but no corresponding data in Firestore. Logging out.');
+  //       await FirebaseAuth.instance.signOut();
+  //       await User.clearFromPrefs();
+  //     }
+  //   } catch (e) {
+  //     print('Error synchronizing user data: $e');
+  //     await FirebaseAuth.instance.signOut();
+  //     await User.clearFromPrefs();
+  //   }
+  // }
 
   // First time run check provider
   final prefs = await SharedPreferences.getInstance();
   final isFirstRun = prefs.getBool('isFirstRun') ?? true;
+  final isLoggedIn = prefs.getString('uid') != null;
 
-  // Determine if the user is logged in based on either SharedPreferences or Firebase Auth
-  final isLoggedIn = storedUser != null || firebaseUser != null;
-
+  
   print('Is user logged in (from SharedPreferences or Firebase Auth): $isLoggedIn');
   // Starting the App with DevicePreview
   runApp(
@@ -65,7 +65,7 @@ void main() async {
       enabled: !bool.fromEnvironment('dart.vm.product'),
       builder: (context) => MyApp(
         isFirstRun: isFirstRun,
-        isLoggedIn: storedUser != null,
+        isLoggedIn: isLoggedIn,
       ),
     ),
   );
@@ -107,7 +107,7 @@ class MyApp extends StatelessWidget {
                     // home: isLoggedIn ? HomePageFrame() : Welcome(),
                     home: isLoggedIn
                         ? HomePageFrame()
-                        : (isFirstRun ? Welcome() : HomePageFrame()),
+                        : (isFirstRun ? Welcome() : Login()),
                   );
                 },
               );
