@@ -1,7 +1,9 @@
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/views/entry/profile_created.dart';
@@ -20,6 +22,7 @@ class EditInformation extends StatefulWidget {
 
 class _EditInformationState extends State<EditInformation> {
   File? _profileImage;
+  String? _profileImageUrl;
   late TextEditingController _nameController;
   late TextEditingController _ageController;
   String _selectedGender = 'Select a gender';
@@ -44,6 +47,7 @@ class _EditInformationState extends State<EditInformation> {
         _ageController.text = user.age ?? '';
         _selectedGender = user.gender ?? 'Select a gender';
         _currentInterests = user.interests ?? [];
+        _profileImageUrl = user.profilePicUrl;
       });
     }
     setState(() {
@@ -65,6 +69,7 @@ class _EditInformationState extends State<EditInformation> {
     if (pickedFile != null) {
       setState(() {
         _profileImage = File(pickedFile.path);
+        _profileImageUrl = null;
       });
     }
   }
@@ -107,9 +112,11 @@ class _EditInformationState extends State<EditInformation> {
                         border: Border.all(color: theme.primaryColor, width: 3.w),
                         image: _profileImage != null
                             ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover)
-                            : null,
+                            : _profileImageUrl != null
+                                ? DecorationImage(image: NetworkImage(_profileImageUrl!), fit: BoxFit.cover)
+                                : null,
                       ),
-                      child: _profileImage == null
+                      child: _profileImage == null && _profileImageUrl == null
                           ? Icon(Icons.person, size: 80.sp, color: theme.hintColor)
                           : null,
                     ),
@@ -199,43 +206,49 @@ class _EditInformationState extends State<EditInformation> {
             return;
           }
 
+          String? profilePicUrl = user.profilePicUrl;
+          if (_profileImage != null) {
+            final storageRef = FirebaseStorage.instance.ref().child('profile_pictures/${user.uid}');
+            final uploadTask = storageRef.putFile(_profileImage!);
+            final snapshot = await uploadTask.whenComplete(() => {});
+            profilePicUrl = await snapshot.ref.getDownloadURL();
+          }
+
           final updatedDataForFirebase = {
             'fullName': _nameController.text.trim(),
             'gender': _selectedGender,
             'age': _ageController.text.trim(),
+            'profilePicUrl': profilePicUrl,
           };
 
           await FirestoreService().updateUser(user.uid, updatedDataForFirebase);
 
-          // ** THE FIX IS HERE **
-          // Create the updated user object for the cache using the NEW data from the controllers.
           final updatedUserForPrefs = mymodel.User(
             uid: user.uid,
             email: user.email,
             createdAt: user.createdAt,
-            fullName: _nameController.text.trim(), // Use new name
-            gender: _selectedGender, // Use new gender
-            age: _ageController.text.trim(), // Use new age
-            interests: user.interests, // Keep old interests
-            profilePicUrl: user.profilePicUrl, // Keep old profile pic URL
-            chatPreferences: user.chatPreferences, // Keep old preferences
-            privacySettings: user.privacySettings, // Keep old settings
-            verificationLevel: user.verificationLevel, // Keep old verification level
+            fullName: _nameController.text.trim(),
+            gender: _selectedGender,
+            age: _ageController.text.trim(),
+            interests: user.interests,
+            profilePicUrl: profilePicUrl,
+            chatPreferences: user.chatPreferences,
+            privacySettings: user.privacySettings,
+            verificationLevel: user.verificationLevel,
           );
 
-          // Save the CORRECT, updated user object to the local cache.
           await mymodel.User.saveToPrefs(updatedUserForPrefs);
 
-          Navigator.of(context, rootNavigator: true).pop(); // Pop loading indicator
+          Navigator.of(context, rootNavigator: true).pop();
 
           if (widget.editType == 'Edit Profile') {
-            Navigator.pop(context); // Go back to the settings page
+            Navigator.pop(context);
           } else {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (context) => ProfileCreated(
-                  profileImage: _profileImage,
+                  profileImage: updatedUserForPrefs.profilePicUrl,
                   name: updatedUserForPrefs.fullName,
                   gender: updatedUserForPrefs.gender ?? '',
                   age: updatedUserForPrefs.age ?? '',

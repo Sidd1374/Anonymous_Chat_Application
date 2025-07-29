@@ -1,6 +1,7 @@
-import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
@@ -106,10 +107,9 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           width: 2,
                         ),
                         image: _profileImagePath != null &&
-                                _profileImagePath!.isNotEmpty &&
-                                File(_profileImagePath!).existsSync()
+                                _profileImagePath!.isNotEmpty
                             ? DecorationImage(
-                                image: FileImage(File(_profileImagePath!)),
+                                image: NetworkImage(_profileImagePath!),
                                 fit: BoxFit.cover,
                               )
                             : const DecorationImage(
@@ -119,11 +119,25 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text(
-                      _name.isNotEmpty ? _name : 'Name not set',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _name.isNotEmpty ? _name : 'Name not set',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (widget.user.verificationLevel == 2)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: SvgPicture.asset(
+                              'assets/icons/icon_verified.svg',
+                              height: 24,
+                              width: 24,
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -145,51 +159,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           .toList(),
                     ),
                     const SizedBox(height: 30),
-                    Text(
-                      'Level 1: Basic',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'We are going with your word here.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'To get to Level 2 and obtain a Verified Badge:',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AadhaarVerification(),
-                            ));
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 15,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Verify Now',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.scaffoldBackgroundColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                    _buildVerificationSection(theme),
                   ],
                 ),
               ),
@@ -198,6 +168,77 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         ),
       ),
     );
+  }
+
+  Widget _buildVerificationSection(ThemeData theme) {
+    if (widget.user.verificationLevel == 2) {
+      return Column(
+        children: [
+          Text(
+            'Level 2: Verified',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'You are a Level 2 verified user!',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ],
+      );
+    } else {
+      return Column(
+        children: [
+          Text(
+            'Level 1: Basic',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'We are going with your word here.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'To get to Level 2 and obtain a Verified Badge:',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AadhaarVerification(),
+                  ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primaryColor,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 40,
+                vertical: 15,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(
+              'Verify Now',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.scaffoldBackgroundColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
   }
 
   Widget _buildInterestTag(String interest, ThemeData theme) {

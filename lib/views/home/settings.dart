@@ -1,4 +1,4 @@
-import 'dart:io';
+// import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -70,7 +70,7 @@ class _SettingsPageState extends State<SettingsPage> {
             MaterialPageRoute(
               builder: (context) => ProfileLvl1(user: _user!),
             ),
-          ).then((_) => _loadUserData()); // Refresh data on return
+          ).then((_) => _refreshUserData()); // Refresh data on return
         }
       },
       child: Card(

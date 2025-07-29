@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'dart:io';
+
 
 import '../home/container.dart';
 import 'aadhaar_verification.dart';
 // import '../home/home_test.dart';
 
 class ProfileCreated extends StatelessWidget {
-  final File? profileImage;
+  final String? profileImage;
   final String name;
   final String gender;
   final String age;
@@ -98,7 +98,7 @@ class ProfileCreated extends StatelessWidget {
                 ),
                 child: profileImage != null
                     ? ClipOval(
-                        child: Image.file(
+                        child: Image.network(
                           profileImage!,
                           fit: BoxFit.cover,
                           width: 100.w,
