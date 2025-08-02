@@ -89,7 +89,7 @@ flutter:
 
     - assets/logo/icon-black-no-bg.png
     - assets/logo/icon-no-bg-white.png
-    - assets/logo/logo.png
+    - assets/logo/app_logo.png
 
     - assets/icons/icon_back.svg
     - assets/icons/icon_heart.svg
