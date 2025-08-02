@@ -98,6 +98,7 @@ class User {
     final userDataJson = jsonEncode(user.toJson());
     print('Saving user data to SharedPreferences: $userDataJson');
     await prefs.setString('user_data', userDataJson);
+    await prefs.setString('uid', user.uid);
   }
 
   // Retrieve user from SharedPreferences
@@ -125,6 +126,7 @@ class User {
   static Future<void> clearFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_data');
+    await prefs.remove('uid');
   }
 
   // Save name, age, and gender to SharedPreferences
