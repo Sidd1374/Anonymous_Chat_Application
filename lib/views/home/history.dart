@@ -88,7 +88,7 @@ class _HistoryState extends State<History> {
       } else {
         _filteredUsers = _allHistoryUsers
             .where((user) =>
-                user['name']!.toLowerCase().contains(query.toLowerCase()))
+                user['name']!.toLowerCase().startsWith(query.toLowerCase()))
             .toList();
       }
     });

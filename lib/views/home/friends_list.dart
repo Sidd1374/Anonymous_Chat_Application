@@ -107,7 +107,7 @@ class _FriendsPageState extends State<FriendsPage> {
       } else {
         _filteredUsers = _allUsers
             .where((user) =>
-                user['name']!.toLowerCase().contains(query.toLowerCase()))
+                user['name']!.toLowerCase().startsWith(query.toLowerCase()))
             .toList();
       }
     });
