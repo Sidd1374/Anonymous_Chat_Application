@@ -35,13 +35,115 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadUserData();
   }
 
+  @override
+  void dispose() {
+    _minAgeController.dispose();
+    _maxAgeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUserData() async {
     final user = await mymodel.User.getFromPrefs();
     if (mounted) {
       setState(() {
         _user = user;
-        // Initialize your switch values and text controllers here from the _user object if needed
+        _updateControllersFromUser();
       });
+    }
+  }
+
+  void _updateControllersFromUser() {
+    if (_user != null) {
+      // Update chat preferences
+      if (_user!.chatPreferences != null) {
+        _chatWithOppositeGender = _user!.chatPreferences!.matchWithGender != null;
+        _chatOnlyWithVerifiedUsers = _user!.chatPreferences!.onlyVerified ?? false;
+        
+        if (_user!.chatPreferences!.minAge != null) {
+          _minAgeController.text = _user!.chatPreferences!.minAge.toString();
+        }
+        if (_user!.chatPreferences!.maxAge != null) {
+          _maxAgeController.text = _user!.chatPreferences!.maxAge.toString();
+        }
+      }
+      
+      // Update privacy settings
+      if (_user!.privacySettings != null) {
+        _showProfilePhotoToFriends = _user!.privacySettings!.showProfilePicToFriends ?? false;
+        _showProfilePhotoToStrangers = _user!.privacySettings!.showProfilePicToStrangers ?? false;
+      }
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    if (_user == null) return;
+
+    try {
+      // Parse age values
+      int? minAge = _minAgeController.text.isEmpty ? null : int.tryParse(_minAgeController.text);
+      int? maxAge = _maxAgeController.text.isEmpty ? null : int.tryParse(_maxAgeController.text);
+
+      // Prepare updated data
+      final updatedData = {
+        'chatPreferences': {
+          'matchWithGender': _chatWithOppositeGender ? (_user!.gender == 'Male' ? 'Female' : 'Male') : null,
+          'minAge': minAge,
+          'maxAge': maxAge,
+          'onlyVerified': _chatOnlyWithVerifiedUsers,
+        },
+        'privacySettings': {
+          'showProfilePicToFriends': _showProfilePhotoToFriends,
+          'showProfilePicToStrangers': _showProfilePhotoToStrangers,
+        },
+      };
+
+      // Update in Firebase
+      await _firestoreService.updateUser(_user!.uid, updatedData);
+
+      // Update local user object
+      final updatedUser = mymodel.User(
+        uid: _user!.uid,
+        email: _user!.email,
+        fullName: _user!.fullName,
+        createdAt: _user!.createdAt,
+        profilePicUrl: _user!.profilePicUrl,
+        gender: _user!.gender,
+        age: _user!.age,
+        interests: _user!.interests,
+        verificationLevel: _user!.verificationLevel,
+        chatPreferences: mymodel.ChatPreferences(
+          matchWithGender: _chatWithOppositeGender ? (_user!.gender == 'Male' ? 'Female' : 'Male') : null,
+          minAge: minAge,
+          maxAge: maxAge,
+          onlyVerified: _chatOnlyWithVerifiedUsers,
+        ),
+        privacySettings: mymodel.PrivacySettings(
+          showProfilePicToFriends: _showProfilePhotoToFriends,
+          showProfilePicToStrangers: _showProfilePhotoToStrangers,
+        ),
+      );
+
+      // Save to SharedPreferences
+      await mymodel.User.saveToPrefs(updatedUser);
+
+      // Update local state
+      setState(() {
+        _user = updatedUser;
+      });
+
+      // Show success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings saved successfully')),
+        );
+      }
+    } catch (e) {
+      // Show error feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving settings: $e')),
+        );
+      }
     }
   }
 
@@ -55,6 +157,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (mounted) {
           setState(() {
             _user = user;
+            _updateControllersFromUser();
           });
         }
       }
@@ -196,10 +299,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: _chatWithOppositeGender,
                   activeColor: Theme.of(context).primaryColor,
                   inactiveTrackColor: Theme.of(context).colorScheme.secondary,
-                  onChanged: (bool value) {
+                  onChanged: (bool value) async {
                     setState(() {
                       _chatWithOppositeGender = value;
                     });
+                    // Save to Firebase
+                    await _savePreferences();
                   },
                 ),
                 SingleChildScrollView(
@@ -215,13 +320,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         SizedBox(
                           width: 50,
                           child: TextField(
+                            controller: _minAgeController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               hintText: 'Min',
                               contentPadding: EdgeInsets.symmetric(horizontal: 8),
                             ),
-                            onChanged: (value) {
-                              _minAgeController.text = value;
+                            onChanged: (value) async {
+                              await _savePreferences();
                             },
                           ),
                         ),
@@ -232,13 +338,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         SizedBox(
                           width: 50,
                           child: TextField(
+                            controller: _maxAgeController,
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               hintText: 'Max',
                               contentPadding: EdgeInsets.symmetric(horizontal: 8),
                             ),
-                            onChanged: (value) {
-                              _maxAgeController.text = value;
+                            onChanged: (value) async {
+                              await _savePreferences();
                             },
                           ),
                         ),
@@ -251,10 +358,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: _showProfilePhotoToStrangers,
                   activeColor: Theme.of(context).primaryColor,
                   inactiveTrackColor: Theme.of(context).colorScheme.secondary,
-                  onChanged: (bool value) {
+                  onChanged: (bool value) async {
                     setState(() {
                       _showProfilePhotoToStrangers = value;
                     });
+                    await _savePreferences();
                   },
                 ),
                 SwitchListTile(
@@ -262,10 +370,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: _showProfilePhotoToFriends,
                   activeColor: Theme.of(context).primaryColor,
                   inactiveTrackColor: Theme.of(context).colorScheme.secondary,
-                  onChanged: (bool value) {
+                  onChanged: (bool value) async {
                     setState(() {
                       _showProfilePhotoToFriends = value;
                     });
+                    await _savePreferences();
                   },
                 ),
                 SwitchListTile(
@@ -273,10 +382,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: _chatOnlyWithVerifiedUsers,
                   activeColor: Theme.of(context).primaryColor,
                   inactiveTrackColor: Theme.of(context).colorScheme.secondary,
-                  onChanged: (bool value) {
+                  onChanged: (bool value) async {
                     setState(() {
                       _chatOnlyWithVerifiedUsers = value;
                     });
+                    await _savePreferences();
                   },
                 ),
                 const SizedBox(height: 8.0),
