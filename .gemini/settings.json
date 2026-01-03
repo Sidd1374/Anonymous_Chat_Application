@@ -1,10 +1,19 @@
 {
-  "selectedAuthType": "oauth-personal",
-  "theme": "Default",
-   "mcpServers": {
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "ui": {
+    "theme": "Default"
+  },
+  "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
       "type": "stdio",
       "timeout": 60000,
       "trust": false

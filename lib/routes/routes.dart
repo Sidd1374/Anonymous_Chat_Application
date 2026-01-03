@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/entry/register.dart';
 import 'package:veil_chat_application/views/entry/login.dart';
-import 'package:veil_chat_application/views/entry/about_you.dart';
 
 // Main pages
 import 'package:veil_chat_application/views/home/container.dart';

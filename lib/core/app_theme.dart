@@ -50,13 +50,13 @@ class AppTheme extends ChangeNotifier {
       bodyLarge: TextStyle(color: LightColors.text),
       bodyMedium: TextStyle(color: LightColors.text),
       bodySmall: TextStyle(color: LightColors.text),
-      titleLarge: TextStyle(color: LightColors.text, fontSize: 20),
+      // titleLarge: TextStyle(color: LightColors.text, fontSize: 20),
     ),
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: LightColors.secondary,
       contentTextStyle: TextStyle(color: LightColors.text),
     ),
-    dialogTheme: const DialogTheme(
+    dialogTheme: const DialogThemeData(
       backgroundColor: LightColors.secondary,
       titleTextStyle: TextStyle(
         color: LightColors.text,
@@ -126,7 +126,7 @@ class AppTheme extends ChangeNotifier {
       backgroundColor: DarkColors.secondary,
       contentTextStyle: TextStyle(color: DarkColors.text),
     ),
-    dialogTheme: const DialogTheme(
+    dialogTheme: const DialogThemeData(
       backgroundColor: DarkColors.secondary,
       titleTextStyle: TextStyle(
         color: DarkColors.text,
