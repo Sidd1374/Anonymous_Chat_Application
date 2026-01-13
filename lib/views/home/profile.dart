@@ -1,10 +1,12 @@
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
+import 'package:veil_chat_application/services/firestore_service.dart';
 
 class ProfileLvl1 extends StatefulWidget {
   final mymodel.User user;
@@ -20,6 +22,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   late int _age;
   late String? _profileImagePath;
   late List<String> _interests;
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -54,8 +57,17 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         ),
       ),
     );
-    // After returning from the edit page, we don't need to do anything here
-    // because the SettingsPage will handle refreshing the data.
+    // Reload latest data from SharedPreferences after edits
+    final refreshed = await mymodel.User.getFromPrefs();
+    if (refreshed != null && mounted) {
+      setState(() {
+        _name = refreshed.fullName;
+        _gender = refreshed.gender ?? '';
+        _age = int.tryParse(refreshed.age ?? '0') ?? 0;
+        _profileImagePath = refreshed.profilePicUrl;
+        _interests = refreshed.interests ?? [];
+      });
+    }
   }
 
   @override
@@ -109,7 +121,8 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                         image: _profileImagePath != null &&
                                 _profileImagePath!.isNotEmpty
                             ? DecorationImage(
-                                image: NetworkImage(_profileImagePath!),
+                                image:
+                                    CachedNetworkImageProvider(_profileImagePath!),
                                 fit: BoxFit.cover,
                               )
                             : const DecorationImage(
@@ -157,6 +170,20 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                       children: _interests
                           .map((interest) => _buildInterestTag(interest, theme))
                           .toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _navigateToEditProfile,
+                      icon: const Icon(Icons.edit),
+                      label: Text(
+                        'Edit profile',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.scaffoldBackgroundColor,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                      ),
                     ),
                     const SizedBox(height: 30),
                     _buildVerificationSection(theme),
@@ -257,4 +284,6 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
       ),
     );
   }
+
+  // Interests are now edited in EditInformation; this page only reflects cached prefs.
 }

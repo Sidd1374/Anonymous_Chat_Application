@@ -1,6 +1,7 @@
 // import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,9 +21,12 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   mymodel.User? _user;
+  mymodel.User? _savedSnapshot; // last saved state (prefs/remote)
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _minAgeController = TextEditingController();
   final TextEditingController _maxAgeController = TextEditingController();
+
+  bool _pendingChange = false; // track whether settings differ from snapshot
 
   bool _chatWithOppositeGender = false;
   bool _showProfilePhotoToStrangers = false;
@@ -37,16 +41,28 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
+    if (_pendingChange && _user != null) {
+      _savePreferencesRemote(_user!);
+    }
     _minAgeController.dispose();
     _maxAgeController.dispose();
     super.dispose();
   }
 
   Future<void> _loadUserData() async {
+    // Use locally cached data populated at login; no Firestore read on page open
     final user = await mymodel.User.getFromPrefs();
+    if (user != null) {
+      debugPrint('[Settings] Loaded user from SharedPreferences (no network)');
+    } else {
+      debugPrint('[Settings] No cached user available');
+    }
+
     if (mounted) {
       setState(() {
         _user = user;
+        _savedSnapshot = user; // baseline for change detection
+        _pendingChange = false;
         _updateControllersFromUser();
       });
     }
@@ -75,81 +91,111 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _savePreferences() async {
+  Future<void> _saveLocalPreferences() async {
     if (_user == null) return;
+    final updatedUser = _buildUpdatedUser(_user!);
+    final baseline = _savedSnapshot ?? _user!;
 
-    try {
-      // Parse age values
-      int? minAge = _minAgeController.text.isEmpty ? null : int.tryParse(_minAgeController.text);
-      int? maxAge = _maxAgeController.text.isEmpty ? null : int.tryParse(_maxAgeController.text);
+    final changed = _settingsChanged(updatedUser, baseline);
 
-      // Prepare updated data
-      final updatedData = {
-        'chatPreferences': {
-          'matchWithGender': _chatWithOppositeGender ? (_user!.gender == 'Male' ? 'Female' : 'Male') : null,
-          'minAge': minAge,
-          'maxAge': maxAge,
-          'onlyVerified': _chatOnlyWithVerifiedUsers,
-        },
-        'privacySettings': {
-          'showProfilePicToFriends': _showProfilePhotoToFriends,
-          'showProfilePicToStrangers': _showProfilePhotoToStrangers,
-        },
-      };
+    setState(() {
+      _user = updatedUser;
+      _pendingChange = changed;
+    });
 
-      // Update in Firebase
-      await _firestoreService.updateUser(_user!.uid, updatedData);
-
-      // Update local user object
-      final updatedUser = mymodel.User(
-        uid: _user!.uid,
-        email: _user!.email,
-        fullName: _user!.fullName,
-        createdAt: _user!.createdAt,
-        profilePicUrl: _user!.profilePicUrl,
-        gender: _user!.gender,
-        age: _user!.age,
-        interests: _user!.interests,
-        verificationLevel: _user!.verificationLevel,
-        chatPreferences: mymodel.ChatPreferences(
-          matchWithGender: _chatWithOppositeGender ? (_user!.gender == 'Male' ? 'Female' : 'Male') : null,
-          minAge: minAge,
-          maxAge: maxAge,
-          onlyVerified: _chatOnlyWithVerifiedUsers,
-        ),
-        privacySettings: mymodel.PrivacySettings(
-          showProfilePicToFriends: _showProfilePhotoToFriends,
-          showProfilePicToStrangers: _showProfilePhotoToStrangers,
-        ),
-      );
-
-      // Save to SharedPreferences
+    if (changed) {
       await mymodel.User.saveToPrefs(updatedUser);
-
-      // Update local state
-      setState(() {
-        _user = updatedUser;
-      });
-
-      // Show success feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Settings saved successfully')),
-        );
-      }
-    } catch (e) {
-      // Show error feedback
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving settings: $e')),
-        );
-      }
     }
+  }
+
+  Future<void> _savePreferencesRemote(mymodel.User user) async {
+    try {
+      debugPrint('[Settings] Saving preferences to Firestore for ${user.uid}');
+      await _firestoreService.updateUser(user.uid, _buildUpdatedFirestoreMap());
+    } catch (_) {
+      // silently ignore on exit; can add logging if needed
+    }
+  }
+
+  mymodel.User _buildUpdatedUser(mymodel.User base) {
+    final minAge = _minAgeController.text.isEmpty
+        ? null
+        : int.tryParse(_minAgeController.text);
+    final maxAge = _maxAgeController.text.isEmpty
+        ? null
+        : int.tryParse(_maxAgeController.text);
+
+    return mymodel.User(
+      uid: base.uid,
+      email: base.email,
+      fullName: base.fullName,
+      createdAt: base.createdAt,
+      profilePicUrl: base.profilePicUrl,
+      gender: base.gender,
+      age: base.age,
+      interests: base.interests,
+      verificationLevel: base.verificationLevel,
+      chatPreferences: mymodel.ChatPreferences(
+        matchWithGender:
+            _chatWithOppositeGender ? (base.gender == 'Male' ? 'Female' : 'Male') : null,
+        minAge: minAge,
+        maxAge: maxAge,
+        onlyVerified: _chatOnlyWithVerifiedUsers,
+      ),
+      privacySettings: mymodel.PrivacySettings(
+        showProfilePicToFriends: _showProfilePhotoToFriends,
+        showProfilePicToStrangers: _showProfilePhotoToStrangers,
+      ),
+    );
+  }
+
+  Map<String, dynamic> _buildUpdatedFirestoreMap() {
+    final minAge = _minAgeController.text.isEmpty
+        ? null
+        : int.tryParse(_minAgeController.text);
+    final maxAge = _maxAgeController.text.isEmpty
+        ? null
+        : int.tryParse(_maxAgeController.text);
+
+    return {
+      'chatPreferences': {
+        'matchWithGender': _chatWithOppositeGender
+            ? (_user?.gender == 'Male' ? 'Female' : 'Male')
+            : null,
+        'minAge': minAge,
+        'maxAge': maxAge,
+        'onlyVerified': _chatOnlyWithVerifiedUsers,
+      },
+      'privacySettings': {
+        'showProfilePicToFriends': _showProfilePhotoToFriends,
+        'showProfilePicToStrangers': _showProfilePhotoToStrangers,
+      },
+    };
+  }
+
+  bool _settingsChanged(mymodel.User a, mymodel.User b) {
+    final ap = a.chatPreferences;
+    final bp = b.chatPreferences;
+    final apr = a.privacySettings;
+    final bpr = b.privacySettings;
+
+    bool chatDiff = (ap?.matchWithGender ?? '') != (bp?.matchWithGender ?? '') ||
+        (ap?.minAge ?? -1) != (bp?.minAge ?? -1) ||
+        (ap?.maxAge ?? -1) != (bp?.maxAge ?? -1) ||
+        (ap?.onlyVerified ?? false) != (bp?.onlyVerified ?? false);
+
+    bool privacyDiff = (apr?.showProfilePicToFriends ?? false) !=
+            (bpr?.showProfilePicToFriends ?? false) ||
+        (apr?.showProfilePicToStrangers ?? false) !=
+            (bpr?.showProfilePicToStrangers ?? false);
+
+    return chatDiff || privacyDiff;
   }
 
   Future<void> _refreshUserData() async {
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
+      debugPrint('[Settings] Manual refresh from Firestore for ${firebaseUser.uid}');
       final userDoc = await _firestoreService.getUser(firebaseUser.uid);
       if (userDoc.exists) {
         final user = mymodel.User.fromJson(userDoc.data()!);
@@ -157,6 +203,8 @@ class _SettingsPageState extends State<SettingsPage> {
         if (mounted) {
           setState(() {
             _user = user;
+            _savedSnapshot = user;
+            _pendingChange = false;
             _updateControllersFromUser();
           });
         }
@@ -197,12 +245,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: (_user?.profilePicUrl != null &&
                         _user!.profilePicUrl!.isNotEmpty)
                     ? ClipOval(
-                        child: Image.network(
-                          _user!.profilePicUrl!,
+                        child: CachedNetworkImage(
+                          imageUrl: _user!.profilePicUrl!,
                           fit: BoxFit.cover,
                           width: 100,
                           height: 100,
-                          errorBuilder: (context, error, stackTrace) => Icon(
+                          placeholder: (context, url) => Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Icon(
                             Icons.person,
                             size: 50,
                             color: theme.hintColor,
@@ -223,8 +278,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       _user?.fullName ?? 'User Name',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 18.h,
                       ),
                     ),
                     SizedBox(height: 4.h),
@@ -289,8 +345,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 30.0),
                 Text(
                   'Chat Preferences',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: 18.h,
                       ),
                 ),
                 const SizedBox(height: 16.0),
@@ -303,8 +360,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     setState(() {
                       _chatWithOppositeGender = value;
                     });
-                    // Save to Firebase
-                    await _savePreferences();
+                    await _saveLocalPreferences();
                   },
                 ),
                 SingleChildScrollView(
@@ -327,7 +383,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               contentPadding: EdgeInsets.symmetric(horizontal: 8),
                             ),
                             onChanged: (value) async {
-                              await _savePreferences();
+                              await _saveLocalPreferences();
                             },
                           ),
                         ),
@@ -345,7 +401,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               contentPadding: EdgeInsets.symmetric(horizontal: 8),
                             ),
                             onChanged: (value) async {
-                              await _savePreferences();
+                              await _saveLocalPreferences();
                             },
                           ),
                         ),
@@ -362,7 +418,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     setState(() {
                       _showProfilePhotoToStrangers = value;
                     });
-                    await _savePreferences();
+                    await _saveLocalPreferences();
                   },
                 ),
                 SwitchListTile(
@@ -374,7 +430,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     setState(() {
                       _showProfilePhotoToFriends = value;
                     });
-                    await _savePreferences();
+                    await _saveLocalPreferences();
                   },
                 ),
                 SwitchListTile(
@@ -386,7 +442,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     setState(() {
                       _chatOnlyWithVerifiedUsers = value;
                     });
-                    await _savePreferences();
+                    await _saveLocalPreferences();
                   },
                 ),
                 const SizedBox(height: 8.0),

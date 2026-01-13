@@ -3,10 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/views/entry/profile_created.dart';
+import 'package:veil_chat_application/services/cloudinary_service.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class EditInformation extends StatefulWidget {
   final String editType; // Can be 'About' or 'Edit Profile'
@@ -30,6 +31,7 @@ class _EditInformationState extends State<EditInformation> {
   bool _isLoading = true;
 
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
+  final TextEditingController _interestController = TextEditingController();
 
   @override
   void initState() {
@@ -59,6 +61,7 @@ class _EditInformationState extends State<EditInformation> {
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
+    _interestController.dispose();
     super.dispose();
   }
 
@@ -136,6 +139,8 @@ class _EditInformationState extends State<EditInformation> {
               _buildDropdownField(context, 'Gender'),
               SizedBox(height: 8.h),
               _buildInputField(context, 'Current Age', numeric: true, controller: _ageController),
+              SizedBox(height: 16.h),
+              _buildInterestsEditor(theme),
               SizedBox(height: 40.h),
               _buildButton(context, widget.editType == 'Edit Profile' ? 'Save Changes' : 'Continue'),
             ],
@@ -187,6 +192,61 @@ class _EditInformationState extends State<EditInformation> {
     );
   }
 
+  Widget _buildInterestsEditor(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Interests', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _interestController,
+          decoration: InputDecoration(
+            hintText: 'Add an interest and tap +',
+            filled: true,
+            fillColor: theme.cardColor,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: _addInterest,
+            ),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
+          ),
+          onSubmitted: (_) => _addInterest(),
+          style: theme.textTheme.bodyLarge,
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _currentInterests
+              .map(
+                (item) => Chip(
+                  label: Text(item),
+                  onDeleted: () {
+                    setState(() {
+                      _currentInterests.remove(item);
+                    });
+                  },
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  void _addInterest() {
+    final v = _interestController.text.trim();
+    if (v.isEmpty) return;
+    if (!_currentInterests.contains(v)) {
+      setState(() {
+        _currentInterests.add(v);
+      });
+    }
+    _interestController.clear();
+  }
+
   Widget _buildButton(BuildContext context, String buttonText) {
     final theme = Theme.of(context);
     return ElevatedButton(
@@ -206,19 +266,46 @@ class _EditInformationState extends State<EditInformation> {
             return;
           }
 
-          String? profilePicUrl = user.profilePicUrl;
-          if (_profileImage != null) {
-            final storageRef = FirebaseStorage.instance.ref().child('profile_pictures/${user.uid}');
-            final uploadTask = storageRef.putFile(_profileImage!);
-            final snapshot = await uploadTask.whenComplete(() => {});
-            profilePicUrl = await snapshot.ref.getDownloadURL();
+          final trimmedInterests = _currentInterests.map((e) => e.trim()).where((e) => e.isNotEmpty).toSet().toList();
+          final currentPic = user.profilePicUrl;
+          final targetPicChanged = _profileImage != null;
+          final newFullName = _nameController.text.trim();
+          final newGender = _selectedGender;
+          final newAge = _ageController.text.trim();
+
+          final hasChanges =
+              newFullName != user.fullName ||
+              newGender != (user.gender ?? '') ||
+              newAge != (user.age ?? '') ||
+              targetPicChanged ||
+              !_listEqualsIgnoreOrder(trimmedInterests, user.interests ?? []);
+
+          if (!hasChanges) {
+            Navigator.of(context, rootNavigator: true).pop();
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No changes to save')));
+            return;
+          }
+
+          String? profilePicUrl = currentPic;
+          if (targetPicChanged) {
+            // Unsigned upload to Cloudinary in Profiles/<uid>/Avatar_<timestamp>.jpg
+            final publicId = 'Avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final uploadResult = await cloudinary.uploadFileUnsigned(
+              filePath: _profileImage!.path,
+              folder: 'Profiles/${user.uid}',
+              publicId: publicId,
+            );
+            profilePicUrl = uploadResult.secureUrl;
+            // Warm cache so the profile image appears quickly next load.
+            await DefaultCacheManager().downloadFile(profilePicUrl);
           }
 
           final updatedDataForFirebase = {
-            'fullName': _nameController.text.trim(),
-            'gender': _selectedGender,
-            'age': _ageController.text.trim(),
+            'fullName': newFullName,
+            'gender': newGender,
+            'age': newAge,
             'profilePicUrl': profilePicUrl,
+            'interests': trimmedInterests,
           };
 
           await FirestoreService().updateUser(user.uid, updatedDataForFirebase);
@@ -227,10 +314,10 @@ class _EditInformationState extends State<EditInformation> {
             uid: user.uid,
             email: user.email,
             createdAt: user.createdAt,
-            fullName: _nameController.text.trim(),
-            gender: _selectedGender,
-            age: _ageController.text.trim(),
-            interests: user.interests,
+            fullName: newFullName,
+            gender: newGender,
+            age: newAge,
+            interests: trimmedInterests,
             profilePicUrl: profilePicUrl,
             chatPreferences: user.chatPreferences,
             privacySettings: user.privacySettings,
@@ -271,4 +358,12 @@ class _EditInformationState extends State<EditInformation> {
       child: Text(buttonText, style: theme.textTheme.labelLarge?.copyWith(color: Colors.white)),
     );
   }
+}
+
+bool _listEqualsIgnoreOrder(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  final sa = a.toSet();
+  final sb = b.toSet();
+  if (sa.length != sb.length) return false;
+  return sa.containsAll(sb);
 }
