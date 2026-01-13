@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:veil_chat_application/core/app_theme.dart';
 
 class UserCard extends StatelessWidget {
   final String name;
@@ -114,7 +114,7 @@ class UserCard extends StatelessWidget {
                 decoration: ShapeDecoration(
                   image: DecorationImage(
                     image: imagePath.startsWith('http')
-                        ? NetworkImage(imagePath)
+                        ? CachedNetworkImageProvider(imagePath)
                         : AssetImage(imagePath) as ImageProvider,
                     fit: BoxFit.cover,
                   ),

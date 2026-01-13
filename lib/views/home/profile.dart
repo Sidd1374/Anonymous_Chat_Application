@@ -1,16 +1,20 @@
 
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
-import 'package:veil_chat_application/services/firestore_service.dart';
 
 class ProfileLvl1 extends StatefulWidget {
   final mymodel.User user;
-  const ProfileLvl1({super.key, required this.user});
+  final ImageProvider? preloadedImageProvider;
+  
+  const ProfileLvl1({
+    super.key,
+    required this.user,
+    this.preloadedImageProvider,
+  });
 
   @override
   _ProfileLvl1State createState() => _ProfileLvl1State();
@@ -20,9 +24,8 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   late String _name;
   late String _gender;
   late int _age;
-  late String? _profileImagePath;
   late List<String> _interests;
-  final FirestoreService _firestoreService = FirestoreService();
+  ImageProvider? _profileImageProvider;
 
   @override
   void initState() {
@@ -39,13 +42,30 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   }
 
   void _initializeStateFromWidget() {
-    setState(() {
-      _name = widget.user.fullName;
-      _gender = widget.user.gender ?? '';
-      _age = int.tryParse(widget.user.age ?? '0') ?? 0;
-      _profileImagePath = widget.user.profilePicUrl;
-      _interests = widget.user.interests ?? [];
-    });
+    _name = widget.user.fullName;
+    _gender = widget.user.gender ?? '';
+    _age = int.tryParse(widget.user.age ?? '0') ?? 0;
+    _interests = widget.user.interests ?? [];
+    
+    // Use preloaded image if available, otherwise load from cache
+    if (widget.preloadedImageProvider != null) {
+      _profileImageProvider = widget.preloadedImageProvider;
+    } else if (widget.user.profilePicUrl != null && widget.user.profilePicUrl!.isNotEmpty) {
+      _loadImageFromCache(widget.user.profilePicUrl!);
+    }
+  }
+  
+  Future<void> _loadImageFromCache(String url) async {
+    try {
+      final file = await DefaultCacheManager().getSingleFile(url);
+      if (mounted) {
+        setState(() {
+          _profileImageProvider = FileImage(file);
+        });
+      }
+    } catch (e) {
+      debugPrint('[Profile] Cache error: $e');
+    }
   }
 
   Future<void> _navigateToEditProfile() async {
@@ -60,12 +80,23 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     // Reload latest data from SharedPreferences after edits
     final refreshed = await mymodel.User.getFromPrefs();
     if (refreshed != null && mounted) {
+      // Load image from cache if URL changed or exists
+      ImageProvider? newImageProvider;
+      if (refreshed.profilePicUrl != null && refreshed.profilePicUrl!.isNotEmpty) {
+        try {
+          final file = await DefaultCacheManager().getSingleFile(refreshed.profilePicUrl!);
+          newImageProvider = FileImage(file);
+        } catch (e) {
+          debugPrint('[Profile] Cache error on refresh: $e');
+        }
+      }
+      
       setState(() {
         _name = refreshed.fullName;
         _gender = refreshed.gender ?? '';
         _age = int.tryParse(refreshed.age ?? '0') ?? 0;
-        _profileImagePath = refreshed.profilePicUrl;
         _interests = refreshed.interests ?? [];
+        _profileImageProvider = newImageProvider;
       });
     }
   }
@@ -118,11 +149,9 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           color: theme.primaryColor,
                           width: 2,
                         ),
-                        image: _profileImagePath != null &&
-                                _profileImagePath!.isNotEmpty
+                        image: _profileImageProvider != null
                             ? DecorationImage(
-                                image:
-                                    CachedNetworkImageProvider(_profileImagePath!),
+                                image: _profileImageProvider!,
                                 fit: BoxFit.cover,
                               )
                             : const DecorationImage(

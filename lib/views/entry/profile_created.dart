@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../home/container.dart';
 import 'aadhaar_verification.dart';
@@ -98,11 +98,23 @@ class ProfileCreated extends StatelessWidget {
                 ),
                 child: profileImage != null
                     ? ClipOval(
-                        child: Image.network(
-                          profileImage!,
+                        child: CachedNetworkImage(
+                          imageUrl: profileImage!,
                           fit: BoxFit.cover,
                           width: 100.w,
                           height: 100.h,
+                          placeholder: (context, url) => Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Icon(
+                            Icons.person,
+                            size: 50.w,
+                            color: theme.hintColor,
+                          ),
                         ),
                       )
                     : Icon(

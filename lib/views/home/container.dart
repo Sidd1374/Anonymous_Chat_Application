@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/settings.dart';
+import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import '../../core/app_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'homepage.dart';
 import 'friends_list.dart';
 import 'history.dart';
-// import 'settings_page.dart'; // Import the new settings page
 
 class HomePageFrame extends StatefulWidget {
   const HomePageFrame({super.key});
@@ -31,6 +32,59 @@ class _HomePageFrameState extends State<HomePageFrame> {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  /// Navigate to Settings with pre-loaded image
+  Future<void> _navigateToSettings() async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Load user and image from cache
+      final user = await mymodel.User.getFromPrefs();
+      ImageProvider? imageProvider;
+      
+      if (user?.profilePicUrl != null && user!.profilePicUrl!.isNotEmpty) {
+        try {
+          final file = await DefaultCacheManager().getSingleFile(user.profilePicUrl!);
+          imageProvider = FileImage(file);
+        } catch (e) {
+          // Cache miss - Settings will handle loading
+        }
+      }
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Navigate to Settings with pre-loaded data
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SettingsPage(
+              preloadedUser: user,
+              preloadedImageProvider: imageProvider,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close dialog on error
+      if (mounted) Navigator.of(context).pop();
+      // Still navigate, Settings will load its own data
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SettingsPage()),
+        );
+      }
+    }
   }
 
   @override
@@ -67,12 +121,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
               ],
             ),
             IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SettingsPage()),
-                );
-              },
+              onPressed: _navigateToSettings,
               icon: SvgPicture.asset(
                 'assets/icons/icon_menu.svg',
                 width: 32, // Increased size

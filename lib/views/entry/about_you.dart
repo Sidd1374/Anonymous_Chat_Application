@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/views/entry/profile_created.dart';
 import 'package:veil_chat_application/services/cloudinary_service.dart';
+import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class EditInformation extends StatefulWidget {
@@ -116,7 +118,7 @@ class _EditInformationState extends State<EditInformation> {
                         image: _profileImage != null
                             ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover)
                             : _profileImageUrl != null
-                                ? DecorationImage(image: NetworkImage(_profileImageUrl!), fit: BoxFit.cover)
+                                ? DecorationImage(image: CachedNetworkImageProvider(_profileImageUrl!), fit: BoxFit.cover)
                                 : null,
                       ),
                       child: _profileImage == null && _profileImageUrl == null
@@ -287,6 +289,7 @@ class _EditInformationState extends State<EditInformation> {
           }
 
           String? profilePicUrl = currentPic;
+          
           if (targetPicChanged) {
             // Unsigned upload to Cloudinary in Profiles/<uid>/Avatar_<timestamp>.jpg
             final publicId = 'Avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -296,8 +299,14 @@ class _EditInformationState extends State<EditInformation> {
               publicId: publicId,
             );
             profilePicUrl = uploadResult.secureUrl;
-            // Warm cache so the profile image appears quickly next load.
-            await DefaultCacheManager().downloadFile(profilePicUrl);
+            
+            // Warm cache so the profile image appears quickly
+            final downloadResult = await DefaultCacheManager().downloadFile(profilePicUrl);
+            ProfileImageService().updateImageProvider(
+              FileImage(downloadResult.file),
+              url: profilePicUrl,
+              file: downloadResult.file,
+            );
           }
 
           final updatedDataForFirebase = {

@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
+import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 
 import '../../core/app_theme.dart';
 import 'register.dart';
-import 'about_you.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 
 class Login extends StatefulWidget {
@@ -24,7 +21,6 @@ class _LoginState extends State<Login> {
   bool _isPasswordVisible = false;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   @override
   Widget build(BuildContext context) {
@@ -256,46 +252,15 @@ class _LoginState extends State<Login> {
                               width: 30,
                             ),
                           ),
-                          OutlinedButton(
-                            onPressed: () async {
-                              try {
-                                final GoogleSignInAccount? googleUser =
-                                    await _googleSignIn.signIn();
-
-                                if (googleUser == null) {
-                                  return;
-                                }
-
-                                final GoogleSignInAuthentication googleAuth =
-                                    await googleUser.authentication;
-
-                                final credential =
-                                    GoogleAuthProvider.credential(
-                                  accessToken: googleAuth.accessToken,
-                                  idToken: googleAuth.idToken,
-                                );
-
-                                await FirebaseAuth.instance
-                                    .signInWithCredential(credential);
-
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          EditInformation(editType: 'About')),
-                                );
-                              } catch (e) {
-                                _showErrorDialog(
-                                    "Google Sign-In failed. Please try again.");
-                              }
-                            },
-                            style: AppTheme.outlinedButtonStyle(context),
-                            child: Image.asset(
-                              "assets/logo/Google_logo.png",
-                              height: 30,
-                              width: 30,
-                            ),
-                          ),
+                          // OutlinedButton(
+                          //   onPressed: () => context.pop(), //_handleGoogleSignIn,
+                          //   style: AppTheme.outlinedButtonStyle(context),
+                          //   child: Image.asset(
+                          //     "assets/logo/Google_logo.png",
+                          //     height: 30,
+                          //     width: 30,
+                          //   ),
+                          // ),
                         ],
                       ),
                     ],
@@ -350,6 +315,10 @@ class _LoginState extends State<Login> {
           if (userDoc.exists) {
             final user = mymodel.User.fromJson(userDoc.data()!);
             await mymodel.User.saveToPrefs(user);
+            // Pre-cache profile image using ProfileImageService for faster loads
+            if (user.profilePicUrl != null && user.profilePicUrl!.isNotEmpty) {
+              ProfileImageService().loadProfileImage(user.profilePicUrl);
+            }
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => HomePageFrame()),
@@ -371,6 +340,77 @@ class _LoginState extends State<Login> {
       }
     }
   }
+
+  // Future<void> _handleGoogleSignIn() async {
+  //   try {
+  //     final gsi.GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+  //     if (googleUser == null) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Google sign-in cancelled')),
+  //       );
+  //       return;
+  //     }
+
+  //       final gsi.GoogleSignInAuthentication googleAuth =
+  //         await googleUser.authentication;
+
+  //     final credential = GoogleAuthProvider.credential(
+  //       idToken: googleAuth.idToken,
+  //     );
+
+  //     final userCredential =
+  //         await FirebaseAuth.instance.signInWithCredential(credential);
+  //     final firebaseUser = userCredential.user;
+
+  //     if (firebaseUser == null) {
+  //       _showErrorDialog('Google authentication failed.');
+  //       return;
+  //     }
+
+  //     final userDoc = await _firestoreService.getUser(firebaseUser.uid);
+  //     mymodel.User appUser;
+
+  //     if (userDoc.exists) {
+  //       appUser = mymodel.User.fromJson(userDoc.data()!);
+  //     } else {
+  //       appUser = mymodel.User(
+  //         uid: firebaseUser.uid,
+  //         email: firebaseUser.email ?? '',
+  //         fullName: firebaseUser.displayName ?? '',
+  //         createdAt: Timestamp.now(),
+  //         profilePicUrl: firebaseUser.photoURL,
+  //         gender: null,
+  //         age: null,
+  //         interests: const [],
+  //         verificationLevel: 1,
+  //         chatPreferences: mymodel.ChatPreferences(
+  //           matchWithGender: "Any",
+  //           minAge: 0,
+  //           maxAge: 0,
+  //           onlyVerified: false,
+  //         ),
+  //         privacySettings: mymodel.PrivacySettings(
+  //           showProfilePicToFriends: true,
+  //           showProfilePicToStrangers: false,
+  //         ),
+  //       );
+
+  //       await _firestoreService.createUser(appUser);
+  //     }
+
+  //     await mymodel.User.saveToPrefs(appUser);
+
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(builder: (context) => HomePageFrame()),
+  //     );
+  //   } on FirebaseAuthException catch (e) {
+  //     _showErrorDialog(e.message ?? 'Google Sign-In failed.');
+  //   } catch (e) {
+  //     _showErrorDialog('Google Sign-In failed. Please try again.');
+  //   }
+  // }
 
   //       Navigator.pushReplacement(
   //         context,
