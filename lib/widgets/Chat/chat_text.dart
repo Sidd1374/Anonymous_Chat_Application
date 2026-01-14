@@ -31,7 +31,10 @@ class ChatText extends StatelessWidget {
       child: Text(
         text,
 
-        style: Theme.of(context).textTheme.bodySmall,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
