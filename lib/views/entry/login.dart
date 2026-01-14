@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:veil_chat_application/views/home/container.dart';
@@ -21,6 +23,7 @@ class _LoginState extends State<Login> {
   bool _isPasswordVisible = false;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
@@ -252,15 +255,15 @@ class _LoginState extends State<Login> {
                               width: 30,
                             ),
                           ),
-                          // OutlinedButton(
-                          //   onPressed: () => context.pop(), //_handleGoogleSignIn,
-                          //   style: AppTheme.outlinedButtonStyle(context),
-                          //   child: Image.asset(
-                          //     "assets/logo/Google_logo.png",
-                          //     height: 30,
-                          //     width: 30,
-                          //   ),
-                          // ),
+                          OutlinedButton(
+                            onPressed: _handleGoogleSignIn,
+                            style: AppTheme.outlinedButtonStyle(context),
+                            child: Image.asset(
+                              "assets/logo/Google_logo.png",
+                              height: 30,
+                              width: 30,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -340,87 +343,82 @@ class _LoginState extends State<Login> {
       }
     }
   }
+  
+// Google Sign-In Handler
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      await GoogleSignIn.instance.initialize(
+        serverClientId: '213748404792-notissn77ktp7st6jl34q0te4s4fro1c.apps.googleusercontent.com',
+      );
+      
+      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
 
-  // Future<void> _handleGoogleSignIn() async {
-  //   try {
-  //     final gsi.GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google sign-in cancelled')),
+        );
+        return;
+      }
 
-  //     if (googleUser == null) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text('Google sign-in cancelled')),
-  //       );
-  //       return;
-  //     }
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
-  //       final gsi.GoogleSignInAuthentication googleAuth =
-  //         await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
 
-  //     final credential = GoogleAuthProvider.credential(
-  //       idToken: googleAuth.idToken,
-  //     );
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      final firebaseUser = userCredential.user;
 
-  //     final userCredential =
-  //         await FirebaseAuth.instance.signInWithCredential(credential);
-  //     final firebaseUser = userCredential.user;
+      if (firebaseUser == null) {
+        _showErrorDialog('Google authentication failed.');
+        return;
+      }
 
-  //     if (firebaseUser == null) {
-  //       _showErrorDialog('Google authentication failed.');
-  //       return;
-  //     }
+      final userDoc = await _firestoreService.getUser(firebaseUser.uid);
+      mymodel.User appUser;
 
-  //     final userDoc = await _firestoreService.getUser(firebaseUser.uid);
-  //     mymodel.User appUser;
+      if (userDoc.exists) {
+        appUser = mymodel.User.fromJson(userDoc.data()!);
+      } else {
+        appUser = mymodel.User(
+          uid: firebaseUser.uid,
+          email: firebaseUser.email ?? '',
+          fullName: firebaseUser.displayName ?? '',
+          createdAt: Timestamp.now(),
+          profilePicUrl: firebaseUser.photoURL,
+          gender: null,
+          age: null,
+          interests: const [],
+          verificationLevel: 1,
+          chatPreferences: mymodel.ChatPreferences(
+            matchWithGender: "Any",
+            minAge: 0,
+            maxAge: 0,
+            onlyVerified: false,
+          ),
+          privacySettings: mymodel.PrivacySettings(
+            showProfilePicToFriends: true,
+            showProfilePicToStrangers: false,
+          ),
+        );
 
-  //     if (userDoc.exists) {
-  //       appUser = mymodel.User.fromJson(userDoc.data()!);
-  //     } else {
-  //       appUser = mymodel.User(
-  //         uid: firebaseUser.uid,
-  //         email: firebaseUser.email ?? '',
-  //         fullName: firebaseUser.displayName ?? '',
-  //         createdAt: Timestamp.now(),
-  //         profilePicUrl: firebaseUser.photoURL,
-  //         gender: null,
-  //         age: null,
-  //         interests: const [],
-  //         verificationLevel: 1,
-  //         chatPreferences: mymodel.ChatPreferences(
-  //           matchWithGender: "Any",
-  //           minAge: 0,
-  //           maxAge: 0,
-  //           onlyVerified: false,
-  //         ),
-  //         privacySettings: mymodel.PrivacySettings(
-  //           showProfilePicToFriends: true,
-  //           showProfilePicToStrangers: false,
-  //         ),
-  //       );
+        await _firestoreService.createUser(appUser);
+      }
 
-  //       await _firestoreService.createUser(appUser);
-  //     }
+      await mymodel.User.saveToPrefs(appUser);
 
-  //     await mymodel.User.saveToPrefs(appUser);
-
-  //     Navigator.pushReplacement(
-  //       context,
-  //       MaterialPageRoute(builder: (context) => HomePageFrame()),
-  //     );
-  //   } on FirebaseAuthException catch (e) {
-  //     _showErrorDialog(e.message ?? 'Google Sign-In failed.');
-  //   } catch (e) {
-  //     _showErrorDialog('Google Sign-In failed. Please try again.');
-  //   }
-  // }
-
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (context) => HomePageFrame()),
-  //       );
-  //     } catch (e) {
-  //       _showErrorDialog("Something went wrong.");
-  //     }
-  //   }
-  // }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomePageFrame()),
+      );
+    } on FirebaseAuthException catch (e) {
+      _showErrorDialog(e.message ?? 'Google Sign-In failed.');
+    } catch (e) {
+      _showErrorDialog('Google Sign-In failed. Please try again.');
+    }
+  }
 
   void _showErrorDialog(String message) {
     showDialog(

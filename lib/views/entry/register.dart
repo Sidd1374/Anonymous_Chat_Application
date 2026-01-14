@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart' as gsi;
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/app_theme.dart';
 import 'login.dart';
 import '../../widgets/docs_dialogs.dart';
@@ -332,50 +332,57 @@ class _RegisterState extends State<Register> {
                             width: 30,
                           ),
                         ),
-                        // OutlinedButton(
-                        //   onPressed: () async {
-                        //     try {
-                        //       print("Google Sign-In started");
-                        //         final gsi.GoogleSignInAccount? googleUser =
-                        //           await gsi.GoogleSignIn().signIn();
-                        //       print("Google User: $googleUser");
+                        OutlinedButton(
+                          onPressed: () async {
+                            try {
+                              print("Google Sign-In started");
+                              // Initialize GoogleSignIn with serverClientId (Web Client ID from Firebase)
+                              await GoogleSignIn.instance.initialize(
+                                serverClientId: '213748404792-notissn77ktp7st6jl34q0te4s4fro1c.apps.googleusercontent.com',
+                              );
+                              
+                              final GoogleSignInAccount? googleUser =
+                                  await GoogleSignIn.instance.authenticate();
+                              print("Google User: $googleUser");
 
-                        //       if (googleUser == null) {
-                        //         // The user canceled the sign-in
-                        //         return;
-                        //       }
+                              if (googleUser == null) {
+                                // The user canceled the sign-in
+                                return;
+                              }
 
-                        //       // Obtain the Google Sign-In authentication details
-                        //         final gsi.GoogleSignInAuthentication googleAuth =
-                        //           await googleUser.authentication;
+                              // Obtain the Google Sign-In authentication details
+                              final GoogleSignInAuthentication googleAuth =
+                                  await googleUser.authentication;
 
-                        //       // Create a new credential for Firebase
-                        //       final credential = GoogleAuthProvider.credential(
-                        //         idToken: googleAuth.idToken,
-                        //       );
+                              // Create a new credential for Firebase
+                              final credential = GoogleAuthProvider.credential(
+                                idToken: googleAuth.idToken,
+                              );
 
-                        //       // Sign in to Firebase with the Google credential
-                        //       await FirebaseAuth.instance
-                        //           .signInWithCredential(credential);
+                              // Sign in to Firebase with the Google credential
+                              await FirebaseAuth.instance
+                                  .signInWithCredential(credential);
 
-                        //       // Navigate to the home page after successful sign-in
-                        //       Navigator.pushReplacement(
-                        //         context,
-                        //         MaterialPageRoute(
-                        //             builder: (context) => HomePageFrame()),
-                        //       );
-                        //     } catch (e) {
-                        //       _showErrorDialog(
-                        //           "Google Sign-In failed. Please try again.");
-                        //     }
-                        //   },
-                        //   style: AppTheme.outlinedButtonStyle(context),
-                        //   child: Image.asset(
-                        //     "assets/logo/Google_logo.png",
-                        //     height: 30,
-                        //     width: 30,
-                        //   ),
-                        // ),
+                              // Navigate to the home page after successful sign-in
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => HomePageFrame()),
+                              );
+                            } catch (e, stackTrace) {
+                              print("Google Sign-In Error: $e");
+                              print("Stack trace: $stackTrace");
+                              _showErrorDialog(
+                                  "Google Sign-In failed: $e");
+                            }
+                          },
+                          style: AppTheme.outlinedButtonStyle(context),
+                          child: Image.asset(
+                            "assets/logo/Google_logo.png",
+                            height: 30,
+                            width: 30,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 25),
