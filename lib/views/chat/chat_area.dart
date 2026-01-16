@@ -573,6 +573,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                 ),
               ],
             ),
+    ),
     );
   }
 

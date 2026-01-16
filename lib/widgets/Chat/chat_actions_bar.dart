@@ -4,11 +4,20 @@ import 'package:flutter_svg/flutter_svg.dart';
 class ChatActionsBar extends StatelessWidget {
   final TextEditingController inputTextController;
   final Function(String) onSend;
+  final VoidCallback? onHeartPress;
+  final VoidCallback? onCameraPress;
+  final bool hasLiked;
+  final bool isFriend;
 
-  const ChatActionsBar(
-      {super.key, 
-      required this.inputTextController, 
-      required this.onSend});
+  const ChatActionsBar({
+    super.key, 
+    required this.inputTextController, 
+    required this.onSend,
+    this.onHeartPress,
+    this.onCameraPress,
+    this.hasLiked = false,
+    this.isFriend = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +27,31 @@ class ChatActionsBar extends StatelessWidget {
       // spacing: 18,
 
       children: [
+        // Heart button - only show if not already friends
+        if (!isFriend)
+          ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: hasLiked 
+                    ? Colors.red.shade100 
+                    : Theme.of(context).colorScheme.secondary,
+                foregroundColor: hasLiked 
+                    ? Colors.red 
+                    : Theme.of(context).colorScheme.primary,
+                fixedSize: Size(50, 50),
+                elevation: hasLiked ? 6 : 4,
+                padding: EdgeInsets.all(0),
+                shape: const CircleBorder(),
+              ),
+              onPressed: onHeartPress,
+              child: hasLiked
+                  ? Icon(Icons.favorite, color: Colors.red, size: 28)
+                  : SvgPicture.asset(
+                      'assets/icons/icon_heart.svg',
+                      width: 32,
+                    )),
+          if (!isFriend) const SizedBox(width: 0),
+
+        // Camera button
         ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.secondary,
@@ -27,14 +61,13 @@ class ChatActionsBar extends StatelessWidget {
               padding: EdgeInsets.all(0),
               shape: const CircleBorder(),
             ),
-            onPressed: () {
-              onSend('Heart button pressed!');
-            },
+            onPressed: onCameraPress,
             child: SvgPicture.asset(
-              'assets/icons/icon_heart.svg',
+              'assets/icons/icon_camera_lens.svg',
               width: 32,
             )),
-        const SizedBox(width: 8),
+        const SizedBox(width: 0),
+        
         Expanded(
             child: Material(
           elevation: 4,
@@ -56,8 +89,9 @@ class ChatActionsBar extends StatelessWidget {
 
             // Styling
             style: TextStyle(
-              color: Theme.of(context).textTheme.bodySmall?.color,
-              fontWeight: FontWeight.w100,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+              fontWeight: FontWeight.w500,
+              fontSize: 16,
             ),
 
             cursorColor: Theme.of(context).textTheme.bodyMedium?.color,
@@ -70,7 +104,8 @@ class ChatActionsBar extends StatelessWidget {
                       .bodySmall
                       ?.color
                       ?.withAlpha(150),
-                  fontWeight: FontWeight.w100,
+                  fontWeight: FontWeight.w400,
+                  fontSize: 16,
                 ),
                 fillColor: Theme.of(context).colorScheme.secondary,
                 filled: true,
@@ -88,8 +123,6 @@ class ChatActionsBar extends StatelessWidget {
                     const EdgeInsets.symmetric(vertical: 14, horizontal: 14)),
           ),
         )),
-
-        const SizedBox(width: 8),
 
         ElevatedButton(
             style: ElevatedButton.styleFrom(

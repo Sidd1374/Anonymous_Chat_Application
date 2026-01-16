@@ -95,6 +95,7 @@ flutter:
 
     - assets/icons/icon_back.svg
     - assets/icons/icon_heart.svg
+    - assets/icons/icon_camera_lens.svg
     - assets/icons/icon_menu.svg
     - assets/icons/icon_search.svg
     - assets/icons/icon_send.svg
