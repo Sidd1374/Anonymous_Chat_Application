@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:veil_chat_application/routes/routes.dart';
+// import 'package:veil_chat_application/routes/routes.dart';
+import 'aadhaar_verification_waiting.dart';
 
 class AadhaarVerification extends StatelessWidget {
   final TextEditingController _aadhaarController = TextEditingController();
@@ -122,7 +123,11 @@ class AadhaarVerification extends StatelessWidget {
     final theme = Theme.of(context);
     return ElevatedButton(
       onPressed: () {
-        Navigator.pushNamed(context, AppRoutes.homepage);
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => AadhaarVerificationWaitingPage(
+            requestId: '1234567890',
+          ),
+        ));
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: theme.primaryColor,

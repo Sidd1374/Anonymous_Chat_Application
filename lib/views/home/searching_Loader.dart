@@ -26,7 +26,8 @@ class LoaderScreen extends StatelessWidget {
               SizedBox(height: 20),
               Text(
                 'Finding the perfect one for you...',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,  
               ),
               SizedBox(height: 40),
               AppButton(

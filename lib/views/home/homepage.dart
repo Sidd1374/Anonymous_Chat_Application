@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:veil_chat_application/widgets/button.dart';
 import 'searching_Loader.dart';
-
+import '../entry/about_you.dart';
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -29,6 +29,14 @@ class HomePage extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                               builder: (context) => const LoaderScreen()))
+                      // Navigator.pushReplacement(
+                      //     context,
+                      //     MaterialPageRoute(
+                      //         builder: (context) => const EditInformation(
+                      //           editType: 'about',
+                      //         )
+                      //     )
+                      // )
                     },
                 text: "Let's Go")
           ],
