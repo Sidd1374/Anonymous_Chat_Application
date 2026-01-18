@@ -210,7 +210,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
                             .bottomNavigationBarTheme
                             .selectedIconTheme
                             ?.color),
-                    label: 'History',
+                    label: 'Strangers',
                     tooltip: 'Strangers You Met',
                   ),
                 ],

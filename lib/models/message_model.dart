@@ -29,7 +29,14 @@ class Message {
   final Timestamp createdAt;
   final Timestamp? readAt;
   final bool isDeleted;
+  final Timestamp? deletedAt;
   final Map<String, dynamic>? metadata; // For additional data (e.g., image dimensions)
+  
+  // Reply fields
+  final String? replyToMessageId;
+  final String? replyToText;
+  final String? replyToSenderId;
+  final MessageType? replyToType; // To show image icon if replying to image
 
   Message({
     required this.messageId,
@@ -43,7 +50,12 @@ class Message {
     required this.createdAt,
     this.readAt,
     this.isDeleted = false,
+    this.deletedAt,
     this.metadata,
+    this.replyToMessageId,
+    this.replyToText,
+    this.replyToSenderId,
+    this.replyToType,
   });
 
   /// Generate a unique message ID using timestamp and sender ID
@@ -86,6 +98,15 @@ class Message {
       readAtTimestamp = Timestamp.fromDate(DateTime.parse(readAtData));
     }
 
+    // Handle Timestamp conversion for deletedAt
+    Timestamp? deletedAtTimestamp;
+    final deletedAtData = json['deletedAt'];
+    if (deletedAtData is Timestamp) {
+      deletedAtTimestamp = deletedAtData;
+    } else if (deletedAtData is String) {
+      deletedAtTimestamp = Timestamp.fromDate(DateTime.parse(deletedAtData));
+    }
+
     return Message(
       messageId: docId,
       senderId: json['senderId'] as String,
@@ -104,7 +125,18 @@ class Message {
       createdAt: createdAtTimestamp,
       readAt: readAtTimestamp,
       isDeleted: json['isDeleted'] as bool? ?? false,
+      deletedAt: deletedAtTimestamp,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      // Reply fields
+      replyToMessageId: json['replyToMessageId'] as String?,
+      replyToText: json['replyToText'] as String?,
+      replyToSenderId: json['replyToSenderId'] as String?,
+      replyToType: json['replyToType'] != null
+          ? MessageType.values.firstWhere(
+              (e) => e.name == json['replyToType'],
+              orElse: () => MessageType.text,
+            )
+          : null,
     );
   }
 
@@ -121,7 +153,13 @@ class Message {
       'createdAt': createdAt,
       'readAt': readAt,
       'isDeleted': isDeleted,
+      'deletedAt': deletedAt,
       'metadata': metadata,
+      // Reply fields
+      'replyToMessageId': replyToMessageId,
+      'replyToText': replyToText,
+      'replyToSenderId': replyToSenderId,
+      'replyToType': replyToType?.name,
     };
   }
 
@@ -138,7 +176,12 @@ class Message {
     Timestamp? createdAt,
     Timestamp? readAt,
     bool? isDeleted,
+    Timestamp? deletedAt,
     Map<String, dynamic>? metadata,
+    String? replyToMessageId,
+    String? replyToText,
+    String? replyToSenderId,
+    MessageType? replyToType,
   }) {
     return Message(
       messageId: messageId ?? this.messageId,
@@ -152,7 +195,12 @@ class Message {
       createdAt: createdAt ?? this.createdAt,
       readAt: readAt ?? this.readAt,
       isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
       metadata: metadata ?? this.metadata,
+      replyToMessageId: replyToMessageId ?? this.replyToMessageId,
+      replyToText: replyToText ?? this.replyToText,
+      replyToSenderId: replyToSenderId ?? this.replyToSenderId,
+      replyToType: replyToType ?? this.replyToType,
     );
   }
 

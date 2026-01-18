@@ -226,6 +226,7 @@ class RelationshipService {
   }
 
   /// Stream friends with their details for real-time updates
+  /// Optimized: generates chatRoomId without extra reads
   Stream<List<Map<String, dynamic>>> streamFriendsWithDetails(String userId) {
     return streamFriendsList(userId).asyncMap((friendIds) async {
       if (friendIds.isEmpty) return [];
@@ -242,8 +243,9 @@ class RelationshipService {
           final data = doc.data() as Map<String, dynamic>;
           data['odId'] = doc.id;
           
-          final chatRoom = await _chatService.getChatRoomBetweenUsers(userId, doc.id);
-          data['chatRoomId'] = chatRoom?.chatRoomId;
+          // Generate chatRoomId directly instead of querying
+          // This saves 1 read per friend!
+          data['chatRoomId'] = ChatRoom.generateChatRoomId(userId, doc.id);
           
           friends.add(data);
         }
@@ -251,6 +253,44 @@ class RelationshipService {
 
       return friends;
     });
+  }
+
+  /// Sync friends list from existing friend-type chat rooms
+  /// Call this to fix missing friends in the friends array
+  Future<void> syncFriendsFromChatRooms(String userId) async {
+    try {
+      // Get all friend-type chat rooms for this user
+      final chatRoomsQuery = await _firestore.collection('chats')
+          .where(Filter.or(
+            Filter('user1Id', isEqualTo: userId),
+            Filter('user2Id', isEqualTo: userId),
+          ))
+          .where('roomType', isEqualTo: 'friend')
+          .get();
+      
+      final friendIds = <String>[];
+      
+      for (final doc in chatRoomsQuery.docs) {
+        final data = doc.data();
+        final user1Id = data['user1Id'] as String?;
+        final user2Id = data['user2Id'] as String?;
+        
+        if (user1Id == userId && user2Id != null) {
+          friendIds.add(user2Id);
+        } else if (user2Id == userId && user1Id != null) {
+          friendIds.add(user1Id);
+        }
+      }
+      
+      if (friendIds.isNotEmpty) {
+        // Update the user's friends array
+        await _usersCollection.doc(userId).set({
+          'friends': FieldValue.arrayUnion(friendIds),
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      print('Error syncing friends: $e');
+    }
   }
 
   /// Remove a friend (both users will be removed from each other's lists)

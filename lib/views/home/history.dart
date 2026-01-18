@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/chat/chat_area.dart';
 import 'package:veil_chat_application/models/user_model.dart';
 import 'package:veil_chat_application/services/relationship_service.dart';
@@ -24,6 +26,12 @@ class _HistoryState extends State<History> {
   List<Map<String, dynamic>> _allStrangers = [];
   List<Map<String, dynamic>> _filteredStrangers = [];
   bool _isLoading = true;
+  bool _isRefreshing = false;
+  bool _hasInitialized = false;
+  
+  // Cache key for SharedPreferences
+  static const String _cacheKey = 'history_strangers_cache';
+  static const String _cacheTimestampKey = 'history_strangers_cache_timestamp';
   
   // Stream subscription
   StreamSubscription<List<Map<String, dynamic>>>? _strangersSubscription;
@@ -48,6 +56,9 @@ class _HistoryState extends State<History> {
   }
 
   Future<void> _initializeHistory() async {
+    if (_hasInitialized) return; // Prevent re-initialization on page switches
+    _hasInitialized = true;
+    
     try {
       // Get current user
       _currentUser = await User.getFromPrefs();
@@ -59,17 +70,29 @@ class _HistoryState extends State<History> {
       }
       _currentUserId = _currentUser!.uid;
 
-      // Subscribe to strangers stream
+      // Load from cache first for instant display
+      await _loadFromCache();
+
+      // Subscribe to strangers stream for real-time updates
       _strangersSubscription = _relationshipService
           .streamStrangersWithDetails(_currentUserId!)
           .listen(
-        (strangers) {
+        (strangers) async {
           if (mounted) {
-            setState(() {
-              _allStrangers = strangers;
-              _filterStrangers(_searchController.text);
-              _isLoading = false;
-            });
+            // Only update if data has changed
+            if (!_areListsEqual(_allStrangers, strangers)) {
+              setState(() {
+                _allStrangers = strangers;
+                _filterStrangers(_searchController.text);
+                _isLoading = false;
+              });
+              // Save to cache
+              await _saveToCache(strangers);
+            } else if (_isLoading) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
           }
         },
         onError: (error) {
@@ -87,6 +110,122 @@ class _HistoryState extends State<History> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  /// Load cached data from SharedPreferences
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('${_cacheKey}_$_currentUserId');
+      
+      if (cachedData != null) {
+        final List<dynamic> decoded = jsonDecode(cachedData);
+        final strangers = decoded.map((item) {
+          final map = Map<String, dynamic>.from(item);
+          // Convert timestamp strings back to Timestamp objects
+          if (map['matchedAt'] != null) {
+            map['matchedAt'] = Timestamp.fromMillisecondsSinceEpoch(map['matchedAt'] as int);
+          }
+          if (map['expiresAt'] != null) {
+            map['expiresAt'] = Timestamp.fromMillisecondsSinceEpoch(map['expiresAt'] as int);
+          }
+          if (map['lastMessageAt'] != null) {
+            map['lastMessageAt'] = Timestamp.fromMillisecondsSinceEpoch(map['lastMessageAt'] as int);
+          }
+          return map;
+        }).toList();
+        
+        if (mounted && _allStrangers.isEmpty) {
+          setState(() {
+            _allStrangers = strangers;
+            _filterStrangers(_searchController.text);
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading from cache: $e');
+    }
+  }
+
+  /// Save data to SharedPreferences cache
+  Future<void> _saveToCache(List<Map<String, dynamic>> strangers) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Convert Timestamps to milliseconds for JSON serialization
+      final serializable = strangers.map((stranger) {
+        final copy = Map<String, dynamic>.from(stranger);
+        if (copy['matchedAt'] is Timestamp) {
+          copy['matchedAt'] = (copy['matchedAt'] as Timestamp).millisecondsSinceEpoch;
+        }
+        if (copy['expiresAt'] is Timestamp) {
+          copy['expiresAt'] = (copy['expiresAt'] as Timestamp).millisecondsSinceEpoch;
+        }
+        if (copy['lastMessageAt'] is Timestamp) {
+          copy['lastMessageAt'] = (copy['lastMessageAt'] as Timestamp).millisecondsSinceEpoch;
+        }
+        return copy;
+      }).toList();
+      
+      await prefs.setString('${_cacheKey}_$_currentUserId', jsonEncode(serializable));
+      await prefs.setInt('${_cacheTimestampKey}_$_currentUserId', DateTime.now().millisecondsSinceEpoch);
+    } catch (e) {
+      print('Error saving to cache: $e');
+    }
+  }
+
+  /// Check if two lists of strangers are equal
+  bool _areListsEqual(List<Map<String, dynamic>> list1, List<Map<String, dynamic>> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i]['odId'] != list2[i]['odId'] ||
+          list1[i]['lastMessage'] != list2[i]['lastMessage'] ||
+          list1[i]['unreadCount'] != list2[i]['unreadCount'] ||
+          list1[i]['hasLiked'] != list2[i]['hasLiked'] ||
+          list1[i]['otherHasLiked'] != list2[i]['otherHasLiked']) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Manual refresh triggered by pull-to-refresh
+  Future<void> _onRefresh() async {
+    if (_currentUserId == null) return;
+    
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      // Fetch fresh data from Firebase
+      final strangers = await _relationshipService.getStrangersWithDetails(_currentUserId!);
+      
+      if (mounted) {
+        setState(() {
+          _allStrangers = strangers;
+          _filterStrangers(_searchController.text);
+          _isRefreshing = false;
+        });
+        
+        // Update cache
+        await _saveToCache(strangers);
+      }
+    } catch (e) {
+      print('Error refreshing: $e');
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to refresh. Please try again.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
   }
@@ -140,6 +279,10 @@ class _HistoryState extends State<History> {
   }
 
   String _formatLastMessage(Map<String, dynamic> stranger) {
+    // Check if last message was deleted
+    final isDeleted = stranger['lastMessageIsDeleted'] as bool? ?? false;
+    if (isDeleted) return 'This message was deleted';
+    
     final lastMessage = stranger['lastMessage'] as String?;
     if (lastMessage == null || lastMessage.isEmpty) return 'No messages yet';
     if (lastMessage.length > 30) {
@@ -167,7 +310,7 @@ class _HistoryState extends State<History> {
               children: [
                 Expanded(
                   child: Text(
-                    "History",
+                    "Strangers",
                     style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 28,
@@ -235,50 +378,64 @@ class _HistoryState extends State<History> {
             ),
           ),
           const SizedBox(height: 16),
-          // Content area
+          // Content area with pull-to-refresh
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _filteredStrangers.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.history,
-                              size: 64,
-                              color: theme.colorScheme.outline,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchController.text.isEmpty
-                                  ? "No chat history"
-                                  : "No results found for '${_searchController.text}'",
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.onSurface.withOpacity(0.7),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            if (_searchController.text.isEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                "Start chatting with strangers!\nThey'll appear here.",
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                : RefreshIndicator(
+                    onRefresh: _onRefresh,
+                    color: theme.colorScheme.primary,
+                    backgroundColor: theme.colorScheme.surface,
+                    child: _filteredStrangers.isEmpty
+                        ? ListView(
+                            // Needed for RefreshIndicator to work with empty list
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.5,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.history,
+                                        size: 64,
+                                        color: theme.colorScheme.outline,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        _searchController.text.isEmpty
+                                            ? "No chat history"
+                                            : "No results found for '${_searchController.text}'",
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      if (_searchController.text.isEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "Start chatting with strangers!\nThey'll appear here.\n\nPull down to refresh",
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ],
-                          ],
-                        ),
-                      )
-                    : ListView.separated(
-                        itemCount: _filteredStrangers.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final stranger = _filteredStrangers[index];
-                          final name = _getDisplayName(stranger);
-                          final image = _getProfileImage(stranger);
+                          )
+                        : ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: _filteredStrangers.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final stranger = _filteredStrangers[index];
+                              final name = _getDisplayName(stranger);
+                              final image = _getProfileImage(stranger);
                           final isVerified = _isVerified(stranger);
                           final chatRoomId = stranger['chatRoomId'] ?? '';
                           final strangerId = stranger['odId'] ?? stranger['uid'] ?? '';
@@ -469,6 +626,7 @@ class _HistoryState extends State<History> {
                           );
                         },
                       ),
+                  ),
           ),
         ],
       ),

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/chat/chat_area.dart';
 import 'package:veil_chat_application/widgets/user_card.dart' as uc;
 import 'package:veil_chat_application/models/user_model.dart';
@@ -27,6 +29,11 @@ class _FriendsPageState extends State<FriendsPage> {
   List<Map<String, dynamic>> _allFriends = [];
   List<Map<String, dynamic>> _filteredFriends = [];
   bool _isLoading = true;
+  bool _isRefreshing = false;
+  bool _hasInitialized = false;
+  
+  // Cache keys
+  static const String _cacheKey = 'friends_list_cache';
   
   // Stream subscription
   StreamSubscription<List<Map<String, dynamic>>>? _friendsSubscription;
@@ -52,6 +59,9 @@ class _FriendsPageState extends State<FriendsPage> {
   }
 
   Future<void> _initializeFriends() async {
+    if (_hasInitialized) return;
+    _hasInitialized = true;
+    
     try {
       // Get current user
       _currentUser = await User.getFromPrefs();
@@ -63,17 +73,32 @@ class _FriendsPageState extends State<FriendsPage> {
       }
       _currentUserId = _currentUser!.uid;
 
-      // Subscribe to friends stream
+      // Load from cache first
+      await _loadFromCache();
+
+      // Only sync if no friends in cache (first-time fix)
+      if (_allFriends.isEmpty) {
+        await _relationshipService.syncFriendsFromChatRooms(_currentUserId!);
+      }
+
+      // Subscribe to friends stream for real-time updates
       _friendsSubscription = _relationshipService
           .streamFriendsWithDetails(_currentUserId!)
           .listen(
-        (friends) {
+        (friends) async {
           if (mounted) {
-            setState(() {
-              _allFriends = friends;
-              _filterFriends(_searchController.text);
-              _isLoading = false;
-            });
+            if (!_areListsEqual(_allFriends, friends)) {
+              setState(() {
+                _allFriends = friends;
+                _filterFriends(_searchController.text);
+                _isLoading = false;
+              });
+              await _saveToCache(friends);
+            } else if (_isLoading) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
           }
         },
         onError: (error) {
@@ -91,6 +116,79 @@ class _FriendsPageState extends State<FriendsPage> {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedData = prefs.getString('${_cacheKey}_$_currentUserId');
+      
+      if (cachedData != null) {
+        final List<dynamic> decoded = jsonDecode(cachedData);
+        final friends = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        
+        if (mounted && _allFriends.isEmpty) {
+          setState(() {
+            _allFriends = friends;
+            _filterFriends(_searchController.text);
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading friends from cache: $e');
+    }
+  }
+
+  Future<void> _saveToCache(List<Map<String, dynamic>> friends) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('${_cacheKey}_$_currentUserId', jsonEncode(friends));
+    } catch (e) {
+      print('Error saving friends to cache: $e');
+    }
+  }
+
+  bool _areListsEqual(List<Map<String, dynamic>> list1, List<Map<String, dynamic>> list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i]['odId'] != list2[i]['odId']) return false;
+    }
+    return true;
+  }
+
+  Future<void> _onRefresh() async {
+    if (_currentUserId == null) return;
+    
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      final friends = await _relationshipService.getFriendsWithDetails(_currentUserId!);
+      
+      if (mounted) {
+        setState(() {
+          _allFriends = friends;
+          _filterFriends(_searchController.text);
+          _isRefreshing = false;
+        });
+        await _saveToCache(friends);
+      }
+    } catch (e) {
+      print('Error refreshing friends: $e');
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to refresh. Please try again.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
   }
@@ -220,107 +318,121 @@ class _FriendsPageState extends State<FriendsPage> {
             ),
           ),
           const SizedBox(height: 16),
-          // Content area
+          // Content area with pull-to-refresh
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _filteredFriends.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 64,
-                              color: theme.colorScheme.outline,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _searchController.text.isEmpty
-                                  ? "No friends yet"
-                                  : "No results found for '${_searchController.text}'",
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.onSurface.withOpacity(0.7),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            if (_searchController.text.isEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                "Match with someone and like each other\nto become friends!",
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                : RefreshIndicator(
+                    onRefresh: _onRefresh,
+                    color: theme.colorScheme.primary,
+                    backgroundColor: theme.colorScheme.surface,
+                    child: _filteredFriends.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.5,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.people_outline,
+                                        size: 64,
+                                        color: theme.colorScheme.outline,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        _searchController.text.isEmpty
+                                            ? "No friends yet"
+                                            : "No results found for '${_searchController.text}'",
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      if (_searchController.text.isEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "Match with someone and like each other\nto become friends!\n\nPull down to refresh",
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ],
-                          ],
-                        ),
-                      )
-                    : GridView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: _filteredFriends.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 180.0,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 0.80,
-                        ),
-                        itemBuilder: (context, index) {
-                          final friend = _filteredFriends[index];
-                          final name = _getDisplayName(friend);
-                          final image = _getProfileImage(friend);
-                          final isVerified = _isVerified(friend);
-                          final gender = friend['gender']?.toString() ?? 'Unknown';
-                          final age = friend['age']?.toString() ?? '?';
-                          final friendId = friend['odId'] ?? friend['uid'] ?? '';
-                          final chatRoomId = friend['chatRoomId'] ?? '';
+                          )
+                        : GridView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.zero,
+                            itemCount: _filteredFriends.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 180.0,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 0.80,
+                            ),
+                            itemBuilder: (context, index) {
+                              final friend = _filteredFriends[index];
+                              final name = _getDisplayName(friend);
+                              final image = _getProfileImage(friend);
+                              final isVerified = _isVerified(friend);
+                              final gender = friend['gender']?.toString() ?? 'Unknown';
+                              final age = friend['age']?.toString() ?? '?';
+                              final friendId = friend['odId'] ?? friend['uid'] ?? '';
+                              final chatRoomId = friend['chatRoomId'] ?? '';
 
-                          return uc.UserCard(
-                            name: name,
-                            gender: gender,
-                            age: age,
-                            imagePath: image,
-                            isLevel2Verified: isVerified,
-                            address: '',
-                            onPressed: () async {
-                              if (chatRoomId.isEmpty && _currentUserId != null) {
-                                // Get or create chat room
-                                final chatRoom = await _chatService.getChatRoomBetweenUsers(
-                                  _currentUserId!,
-                                  friendId,
-                                );
-                                if (chatRoom != null && mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ChatArea(
-                                        userName: name,
-                                        userImage: image,
-                                        chatId: chatRoom.chatRoomId,
-                                        otherUserId: friendId,
+                              return uc.UserCard(
+                                name: name,
+                                gender: gender,
+                                age: age,
+                                imagePath: image,
+                                isLevel2Verified: isVerified,
+                                address: '',
+                                onPressed: () async {
+                                  if (chatRoomId.isEmpty && _currentUserId != null) {
+                                    // Get or create chat room
+                                    final chatRoom = await _chatService.getChatRoomBetweenUsers(
+                                      _currentUserId!,
+                                      friendId,
+                                    );
+                                    if (chatRoom != null && mounted) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ChatArea(
+                                            userName: name,
+                                            userImage: image,
+                                            chatId: chatRoom.chatRoomId,
+                                            otherUserId: friendId,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } else if (mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ChatArea(
+                                          userName: name,
+                                          userImage: image,
+                                          chatId: chatRoomId,
+                                          otherUserId: friendId,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                }
-                              } else if (mounted) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ChatArea(
-                                      userName: name,
-                                      userImage: image,
-                                      chatId: chatRoomId,
-                                      otherUserId: friendId,
-                                    ),
-                                  ),
-                                );
-                              }
+                                    );
+                                  }
+                                },
+                              );
                             },
-                          );
-                        },
-                      ),
+                          ),
+                  ),
           ),
         ],
       ),

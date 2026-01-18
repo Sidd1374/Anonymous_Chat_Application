@@ -11,7 +11,6 @@ import 'login.dart';
 import '../../widgets/docs_dialogs.dart';
 import '../../models/user_model.dart' as app_user;
 import '../../services/firestore_service.dart';
-import '../entry/about_you.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -373,8 +372,8 @@ class _RegisterState extends State<Register> {
                                     )),
                               );
                             } catch (e, stackTrace) {
-                              print("Google Sign-In Error: $e");
-                              print("Stack trace: $stackTrace");
+                              // print("Google Sign-In Error: $e");
+                              // print("Stack trace: $stackTrace");
                               _showErrorDialog(
                                   "Google Sign-In failed: $e");
                             }

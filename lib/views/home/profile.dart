@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
@@ -140,24 +141,27 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                 ),
                 child: Column(
                   children: [
-                    Container(
-                      width: 150,
-                      height: 150,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: theme.primaryColor,
-                          width: 2,
+                    GestureDetector(
+                      onLongPress: () => _openFullscreenImage(context),
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: theme.primaryColor,
+                            width: 2,
+                          ),
+                          image: _profileImageProvider != null
+                              ? DecorationImage(
+                                  image: _profileImageProvider!,
+                                  fit: BoxFit.cover,
+                                )
+                              : const DecorationImage(
+                                  image: AssetImage('assets/Profile_image.png'),
+                                  fit: BoxFit.cover,
+                                ),
                         ),
-                        image: _profileImageProvider != null
-                            ? DecorationImage(
-                                image: _profileImageProvider!,
-                                fit: BoxFit.cover,
-                              )
-                            : const DecorationImage(
-                                image: AssetImage('assets/Profile_image.png'),
-                                fit: BoxFit.cover,
-                              ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -314,5 +318,135 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
     );
   }
 
-  // Interests are now edited in EditInformation; this page only reflects cached prefs.
+  void _openFullscreenImage(BuildContext context) {
+    final imageUrl = widget.user.profilePicUrl;
+    if (imageUrl == null || imageUrl.isEmpty) return;
+
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.black87,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return _ProfileFullscreenImageViewer(
+            imageUrl: imageUrl,
+            imageProvider: _profileImageProvider,
+          );
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+  }
+}
+
+class _ProfileFullscreenImageViewer extends StatefulWidget {
+  final String imageUrl;
+  final ImageProvider? imageProvider;
+
+  const _ProfileFullscreenImageViewer({
+    required this.imageUrl,
+    this.imageProvider,
+  });
+
+  @override
+  State<_ProfileFullscreenImageViewer> createState() => _ProfileFullscreenImageViewerState();
+}
+
+class _ProfileFullscreenImageViewerState extends State<_ProfileFullscreenImageViewer> {
+  final TransformationController _transformationController = TransformationController();
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Dismiss on tap background
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(color: Colors.transparent),
+          ),
+          // Image with zoom
+          Center(
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: widget.imageProvider != null
+                  ? Image(
+                      image: widget.imageProvider!,
+                      fit: BoxFit.contain,
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: widget.imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => Center(
+                        child: CircularProgressIndicator(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Icon(
+                        Icons.broken_image,
+                        color: theme.colorScheme.error,
+                        size: 64,
+                      ),
+                    ),
+            ),
+          ),
+          // Top bar with close button
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    _buildIconButton(
+                      context,
+                      icon: Icons.close,
+                      onTap: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconButton(BuildContext context, {
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.black45,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
 }

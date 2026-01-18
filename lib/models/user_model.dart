@@ -218,16 +218,19 @@ class ChatPreferences {
 class PrivacySettings {
   final bool? showProfilePicToFriends;
   final bool? showProfilePicToStrangers;
+  final bool? hideReadReceipts; // When true, don't send read receipts to others
 
   PrivacySettings({
     this.showProfilePicToFriends,
     this.showProfilePicToStrangers,
+    this.hideReadReceipts,
   });
 
   factory PrivacySettings.fromJson(Map<String, dynamic> json) {
     return PrivacySettings(
       showProfilePicToFriends: json['showProfilePicToFriends'] as bool?,
       showProfilePicToStrangers: json['showProfilePicToStrangers'] as bool?,
+      hideReadReceipts: json['hideReadReceipts'] as bool?,
     );
   }
 
@@ -235,6 +238,7 @@ class PrivacySettings {
     return {
       'showProfilePicToFriends': showProfilePicToFriends,
       'showProfilePicToStrangers': showProfilePicToStrangers,
+      'hideReadReceipts': hideReadReceipts,
     };
   }
 }

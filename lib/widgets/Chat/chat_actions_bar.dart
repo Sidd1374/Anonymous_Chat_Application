@@ -1,11 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:super_clipboard/super_clipboard.dart';
 
 class ChatActionsBar extends StatelessWidget {
   final TextEditingController inputTextController;
   final Function(String) onSend;
   final VoidCallback? onHeartPress;
   final VoidCallback? onCameraPress;
+  final Function(Uint8List imageBytes)? onImagePaste;
   final bool hasLiked;
   final bool isFriend;
 
@@ -15,6 +18,7 @@ class ChatActionsBar extends StatelessWidget {
     required this.onSend,
     this.onHeartPress,
     this.onCameraPress,
+    this.onImagePaste,
     this.hasLiked = false,
     this.isFriend = false,
   });
@@ -56,15 +60,19 @@ class ChatActionsBar extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.secondary,
               foregroundColor: Theme.of(context).colorScheme.primary,
-              fixedSize: Size(50, 50),
+              fixedSize: const Size(50, 50),
               elevation: 4,
-              padding: EdgeInsets.all(0),
+              padding: EdgeInsets.zero,
               shape: const CircleBorder(),
             ),
             onPressed: onCameraPress,
             child: SvgPicture.asset(
               'assets/icons/icon_camera_lens.svg',
               width: 32,
+              colorFilter: ColorFilter.mode(
+                Theme.of(context).colorScheme.primary,
+                BlendMode.srcIn,
+              ),
             )),
         const SizedBox(width: 0),
         
@@ -82,6 +90,16 @@ class ChatActionsBar extends StatelessWidget {
             autofocus: true,
             minLines: 1,
             maxLines: 5,
+
+            // Enable content insertion for images from keyboard
+            contentInsertionConfiguration: ContentInsertionConfiguration(
+              allowedMimeTypes: const ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+              onContentInserted: (KeyboardInsertedContent content) async {
+                if (content.data != null && onImagePaste != null) {
+                  onImagePaste!(content.data!);
+                }
+              },
+            ),
 
             onSubmitted: (text) {
               onSend(text);
