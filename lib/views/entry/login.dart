@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:veil_chat_application/views/home/container.dart';
+import '../entry/about_you.dart';
 
 import '../../core/app_theme.dart';
 import 'register.dart';
@@ -411,7 +412,7 @@ class _LoginState extends State<Login> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomePageFrame()),
+        MaterialPageRoute(builder: (context) => EditInformation(editType: 'about')),
       );
     } on FirebaseAuthException catch (e) {
       _showErrorDialog(e.message ?? 'Google Sign-In failed.');
