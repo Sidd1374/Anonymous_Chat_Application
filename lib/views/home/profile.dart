@@ -3,19 +3,37 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/views/entry/aadhaar_verification.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
 
 class ProfileLvl1 extends StatefulWidget {
-  final mymodel.User user;
+  final mymodel.User? user;
   final ImageProvider? preloadedImageProvider;
+  
+  /// When viewing another user's profile, set this to true
+  final bool isViewingOther;
+  
+  /// The other user's ID to fetch their profile from Firestore
+  final String? otherUserId;
+  
+  /// Optional: Other user's name (fallback if Firestore fetch fails)
+  final String? otherUserName;
+  
+  /// Optional: Other user's profile pic URL (fallback if Firestore fetch fails)
+  final String? otherUserProfilePic;
   
   const ProfileLvl1({
     super.key,
-    required this.user,
+    this.user,
     this.preloadedImageProvider,
-  });
+    this.isViewingOther = false,
+    this.otherUserId,
+    this.otherUserName,
+    this.otherUserProfilePic,
+  }) : assert(user != null || (isViewingOther && otherUserId != null),
+             'Either user must be provided or isViewingOther with otherUserId');
 
   @override
   _ProfileLvl1State createState() => _ProfileLvl1State();
@@ -27,32 +45,94 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   late int _age;
   late List<String> _interests;
   ImageProvider? _profileImageProvider;
+  bool _isLoading = true;
+  int _verificationLevel = 0;
+  String? _profilePicUrl;
 
   @override
   void initState() {
     super.initState();
-    _initializeStateFromWidget();
+    if (widget.isViewingOther) {
+      _loadOtherUserProfile();
+    } else {
+      _initializeStateFromWidget();
+      _isLoading = false;
+    }
   }
 
   @override
   void didUpdateWidget(ProfileLvl1 oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.user != oldWidget.user) {
+    if (!widget.isViewingOther && widget.user != oldWidget.user) {
       _initializeStateFromWidget();
     }
   }
 
+  Future<void> _loadOtherUserProfile() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.otherUserId)
+          .get();
+      
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          _name = data['name'] ?? widget.otherUserName ?? 'Anonymous';
+          _gender = data['gender'] ?? '';
+          _age = int.tryParse(data['age']?.toString() ?? '0') ?? 0;
+          _interests = (data['interests'] as List<dynamic>?)?.cast<String>() ?? [];
+          _verificationLevel = data['verificationLevel'] ?? 0;
+          _profilePicUrl = data['profileImage'] ?? widget.otherUserProfilePic;
+          _isLoading = false;
+        });
+        
+        if (_profilePicUrl != null && _profilePicUrl!.isNotEmpty) {
+          _loadImageFromCache(_profilePicUrl!);
+        }
+      } else {
+        // Fallback to provided data
+        setState(() {
+          _name = widget.otherUserName ?? 'Anonymous';
+          _gender = '';
+          _age = 0;
+          _interests = [];
+          _verificationLevel = 0;
+          _profilePicUrl = widget.otherUserProfilePic;
+          _isLoading = false;
+        });
+        
+        if (_profilePicUrl != null && _profilePicUrl!.isNotEmpty) {
+          _loadImageFromCache(_profilePicUrl!);
+        }
+      }
+    } catch (e) {
+      debugPrint('[Profile] Error loading other user: $e');
+      if (mounted) {
+        setState(() {
+          _name = widget.otherUserName ?? 'Anonymous';
+          _gender = '';
+          _age = 0;
+          _interests = [];
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   void _initializeStateFromWidget() {
-    _name = widget.user.fullName;
-    _gender = widget.user.gender ?? '';
-    _age = int.tryParse(widget.user.age ?? '0') ?? 0;
-    _interests = widget.user.interests ?? [];
+    _name = widget.user!.fullName;
+    _gender = widget.user!.gender ?? '';
+    _age = int.tryParse(widget.user!.age ?? '0') ?? 0;
+    _interests = widget.user!.interests ?? [];
+    _verificationLevel = widget.user!.verificationLevel ?? 0;
+    _profilePicUrl = widget.user!.profilePicUrl;
     
     // Use preloaded image if available, otherwise load from cache
     if (widget.preloadedImageProvider != null) {
       _profileImageProvider = widget.preloadedImageProvider;
-    } else if (widget.user.profilePicUrl != null && widget.user.profilePicUrl!.isNotEmpty) {
-      _loadImageFromCache(widget.user.profilePicUrl!);
+    } else if (widget.user!.profilePicUrl != null && widget.user!.profilePicUrl!.isNotEmpty) {
+      _loadImageFromCache(widget.user!.profilePicUrl!);
     }
   }
   
@@ -106,6 +186,17 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Profile'),
+          backgroundColor: theme.appBarTheme.backgroundColor,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -113,7 +204,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
         backgroundColor: theme.appBarTheme.backgroundColor,
         iconTheme: theme.appBarTheme.iconTheme,
         titleTextStyle: theme.appBarTheme.titleTextStyle,
-        actions: [
+        actions: widget.isViewingOther ? null : [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: _navigateToEditProfile,
@@ -174,7 +265,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (widget.user.verificationLevel == 2)
+                        if (_verificationLevel == 2)
                           Padding(
                             padding: const EdgeInsets.only(left: 8.0),
                             child: SvgPicture.asset(
@@ -205,21 +296,23 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
                           .toList(),
                     ),
                     const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: _navigateToEditProfile,
-                      icon: const Icon(Icons.edit),
-                      label: Text(
-                        'Edit profile',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.scaffoldBackgroundColor,
+                    if (!widget.isViewingOther) ...[
+                      ElevatedButton.icon(
+                        onPressed: _navigateToEditProfile,
+                        icon: const Icon(Icons.edit),
+                        label: Text(
+                          'Edit profile',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.scaffoldBackgroundColor,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    _buildVerificationSection(theme),
+                      const SizedBox(height: 30),
+                      _buildVerificationSection(theme),
+                    ],
                   ],
                 ),
               ),
@@ -231,7 +324,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   }
 
   Widget _buildVerificationSection(ThemeData theme) {
-    if (widget.user.verificationLevel == 2) {
+    if (_verificationLevel == 2) {
       return Column(
         children: [
           Text(
@@ -319,7 +412,7 @@ class _ProfileLvl1State extends State<ProfileLvl1> {
   }
 
   void _openFullscreenImage(BuildContext context) {
-    final imageUrl = widget.user.profilePicUrl;
+    final imageUrl = _profilePicUrl;
     if (imageUrl == null || imageUrl.isEmpty) return;
 
     Navigator.of(context).push(

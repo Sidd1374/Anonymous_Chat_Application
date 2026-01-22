@@ -12,6 +12,7 @@ import 'package:veil_chat_application/models/chat_room_model.dart';
 import 'package:veil_chat_application/services/chat_service.dart';
 import 'package:veil_chat_application/services/cloudinary_service.dart';
 import 'package:veil_chat_application/models/user_model.dart';
+import 'package:veil_chat_application/views/home/profile.dart';
 
 class ChatArea extends StatefulWidget {
   final String userName;
@@ -978,7 +979,24 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
       },
       child: Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileLvl1(
+                  isViewingOther: true,
+                  otherUserId: widget.otherUserId,
+                  otherUserName: currentUserName,
+                  otherUserProfilePic: currentUserImage,
+                ),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
           children: [
             CircleAvatar(
               backgroundImage: currentUserImage.startsWith('http')
@@ -997,15 +1015,15 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                   ),
                   if (_chatRoom != null && _chatRoom!.roomType == ChatRoomType.stranger)
                     Text(
-                      _otherHasLiked ? '❤️ Liked you!' : 'Stranger',
+                      _otherHasLiked ? '❤️ Liked you!' : 'Tap to view profile',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: 11,
-                        color: _otherHasLiked ? Colors.red : null,
+                        color: _otherHasLiked ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   if (_chatRoom != null && _chatRoom!.roomType == ChatRoomType.friend)
                     Text(
-                      '✓ Friend',
+                      '✓ Friend · Tap to view profile',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: 11,
                         color: Colors.green,
@@ -1015,6 +1033,8 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
               ),
             ),
           ],
+            ),
+          ),
         ),
         actions: [
           // Show expiry timer for stranger chats OR infinity for friends

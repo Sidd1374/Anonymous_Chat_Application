@@ -4,6 +4,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/settings.dart';
+import 'package:veil_chat_application/views/home/find_stranger.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import '../../core/app_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -100,6 +101,10 @@ class _HomePageFrameState extends State<HomePageFrame> {
             Row(
               children: [
                 GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FindStrangerPage()),
+                  ),
                   onLongPress: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => Welcome()),
