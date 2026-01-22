@@ -14,6 +14,8 @@ import 'profile.dart';
 import 'package:veil_chat_application/widgets/docs_dialogs.dart' as dia;
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../profile/profile_page.dart';
+
 class SettingsPage extends StatefulWidget {
   final mymodel.User? preloadedUser;
   final ImageProvider? preloadedImageProvider;
@@ -207,12 +209,19 @@ class _SettingsPageState extends State<SettingsPage> {
         minAge: minAge,
         maxAge: maxAge,
         onlyVerified: _chatOnlyWithVerifiedUsers,
+        // Preserve existing interests and dealBreakers from chat settings page
+        interests: base.chatPreferences?.interests,
+        dealBreakers: base.chatPreferences?.dealBreakers,
       ),
       privacySettings: mymodel.PrivacySettings(
         showProfilePicToFriends: _showProfilePhotoToFriends,
         showProfilePicToStrangers: _showProfilePhotoToStrangers,
         hideReadReceipts: _hideReadReceipts,
       ),
+      location: base.location,
+      latitude: base.latitude,
+      longitude: base.longitude,
+      locationUpdatedAt: base.locationUpdatedAt,
     );
   }
 
@@ -220,15 +229,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final minAge = _ageRange.start.round();
     final maxAge = _ageRange.end.round();
 
+    // Only update the fields we're managing here - don't overwrite interests/dealBreakers
     return {
-      'chatPreferences': {
-        'matchWithGender': _chatWithOppositeGender
-            ? (_user?.gender == 'Male' ? 'Female' : 'Male')
-            : null,
-        'minAge': minAge,
-        'maxAge': maxAge,
-        'onlyVerified': _chatOnlyWithVerifiedUsers,
-      },
+      'chatPreferences.matchWithGender': _chatWithOppositeGender
+          ? (_user?.gender == 'Male' ? 'Female' : 'Male')
+          : null,
+      'chatPreferences.minAge': minAge,
+      'chatPreferences.maxAge': maxAge,
+      'chatPreferences.onlyVerified': _chatOnlyWithVerifiedUsers,
       'privacySettings': {
         'showProfilePicToFriends': _showProfilePhotoToFriends,
         'showProfilePicToStrangers': _showProfilePhotoToStrangers,
@@ -483,12 +491,19 @@ class _SettingsPageState extends State<SettingsPage> {
         if (_user != null) {
           Navigator.push(
             context,
+            // MaterialPageRoute(
+            //   builder: (context) => ProfileLvl1(
+            //     user: _user!,
+            //     preloadedImageProvider: _profileImageProvider,
+            //   ),
+            // ),
             MaterialPageRoute(
-              builder: (context) => ProfileLvl1(
+              builder: (context) => ProfilePage(
                 user: _user!,
                 preloadedImageProvider: _profileImageProvider,
               ),
             ),
+
           ).then((_) => _refreshUserData()); // Refresh data on return
         }
       },

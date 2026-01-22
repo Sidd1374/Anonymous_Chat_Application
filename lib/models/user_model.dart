@@ -19,6 +19,10 @@ class User {
   final int? verificationLevel;
   final ChatPreferences? chatPreferences;
   final PrivacySettings? privacySettings;
+  final String? location; // City/Region name
+  final double? latitude; // For distance-based matching
+  final double? longitude;
+  final Timestamp? locationUpdatedAt; // When location was last verified
 
   User({
     required this.uid,
@@ -32,6 +36,10 @@ class User {
     this.verificationLevel,
     this.chatPreferences,
     this.privacySettings,
+    this.location,
+    this.latitude,
+    this.longitude,
+    this.locationUpdatedAt,
   });
 
     factory User.fromJson(Map<String, dynamic> json) {
@@ -54,6 +62,15 @@ class User {
       throw FormatException('Invalid or missing createdAt field');
     }
 
+    // Parse locationUpdatedAt
+    dynamic locationUpdatedAtData = json['locationUpdatedAt'];
+    Timestamp? locationUpdatedAt;
+    if (locationUpdatedAtData is Timestamp) {
+      locationUpdatedAt = locationUpdatedAtData;
+    } else if (locationUpdatedAtData is String) {
+      locationUpdatedAt = Timestamp.fromDate(DateTime.parse(locationUpdatedAtData));
+    }
+
     return User(
       uid: uid,
       email: json['email'] as String,
@@ -74,6 +91,10 @@ class User {
           ? PrivacySettings.fromJson(
               json['privacySettings'] as Map<String, dynamic>)
           : null,
+      location: json['location'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      locationUpdatedAt: locationUpdatedAt,
     );
   }
 
@@ -90,6 +111,10 @@ class User {
       'verificationLevel': verificationLevel,
       'chatPreferences': chatPreferences?.toJson(),
       'privacySettings': privacySettings?.toJson(),
+      'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
+      'locationUpdatedAt': locationUpdatedAt?.toDate().toIso8601String(),
     };
   }
 
@@ -188,12 +213,16 @@ class ChatPreferences {
   final int? minAge;
   final int? maxAge;
   final bool? onlyVerified;
+  final List<String>? interests; // Liked interests for matching
+  final List<String>? dealBreakers; // Disliked interests to avoid
 
   ChatPreferences({
     this.matchWithGender,
     this.minAge,
     this.maxAge,
     this.onlyVerified,
+    this.interests,
+    this.dealBreakers,
   });
 
   factory ChatPreferences.fromJson(Map<String, dynamic> json) {
@@ -202,6 +231,12 @@ class ChatPreferences {
       minAge: json['minAge'] as int?,
       maxAge: json['maxAge'] as int?,
       onlyVerified: json['onlyVerified'] as bool?,
+      interests: (json['interests'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
+      dealBreakers: (json['dealBreakers'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
     );
   }
 
@@ -211,6 +246,8 @@ class ChatPreferences {
       'minAge': minAge,
       'maxAge': maxAge,
       'onlyVerified': onlyVerified,
+      'interests': interests,
+      'dealBreakers': dealBreakers,
     };
   }
 }

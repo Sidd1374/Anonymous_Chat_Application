@@ -12,7 +12,7 @@ import 'package:veil_chat_application/models/chat_room_model.dart';
 import 'package:veil_chat_application/services/chat_service.dart';
 import 'package:veil_chat_application/services/cloudinary_service.dart';
 import 'package:veil_chat_application/models/user_model.dart';
-import 'package:veil_chat_application/views/home/profile.dart';
+import 'package:veil_chat_application/views/profile/profile_page.dart';
 
 class ChatArea extends StatefulWidget {
   final String userName;
@@ -984,11 +984,9 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ProfileLvl1(
+                builder: (context) => ProfilePage(
                   isViewingOther: true,
                   otherUserId: widget.otherUserId,
-                  otherUserName: currentUserName,
-                  otherUserProfilePic: currentUserImage,
                 ),
               ),
             );

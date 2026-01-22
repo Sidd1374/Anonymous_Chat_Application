@@ -8,6 +8,7 @@ import 'package:veil_chat_application/views/home/find_stranger.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import '../../core/app_theme.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../entry/about_you.dart';
 
 import 'homepage.dart';
 import 'friends_list.dart';
@@ -107,7 +108,7 @@ class _HomePageFrameState extends State<HomePageFrame> {
                   ),
                   onLongPress: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => Welcome()),
+                    MaterialPageRoute(builder: (context) => const EditInformation(editType: 'About',)),
                   ),
                   child: Image.asset(
                     appTheme.currentLogoPath,

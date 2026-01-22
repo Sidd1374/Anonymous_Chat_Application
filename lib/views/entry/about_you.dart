@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/views/entry/profile_created.dart';
 import 'package:veil_chat_application/services/cloudinary_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
+import 'package:veil_chat_application/services/location_service.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class EditInformation extends StatefulWidget {
@@ -32,8 +34,15 @@ class _EditInformationState extends State<EditInformation> {
   List<String> _currentInterests = [];
   bool _isLoading = true;
 
+  // Location fields
+  String? _location;
+  double? _latitude;
+  double? _longitude;
+  bool _isDetectingLocation = false;
+  String? _locationError;
+  final LocationService _locationService = LocationService();
+
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
-  final TextEditingController _interestController = TextEditingController();
 
   @override
   void initState() {
@@ -52,6 +61,9 @@ class _EditInformationState extends State<EditInformation> {
         _selectedGender = user.gender ?? 'Select a gender';
         _currentInterests = user.interests ?? [];
         _profileImageUrl = user.profilePicUrl;
+        _location = user.location;
+        _latitude = user.latitude;
+        _longitude = user.longitude;
       });
     }
     setState(() {
@@ -59,11 +71,89 @@ class _EditInformationState extends State<EditInformation> {
     });
   }
 
+  Future<void> _detectLocation() async {
+    setState(() {
+      _isDetectingLocation = true;
+      _locationError = null;
+    });
+
+    final result = await _locationService.detectCurrentLocation();
+
+    if (mounted) {
+      setState(() {
+        _isDetectingLocation = false;
+        if (result.success && result.data != null) {
+          _location = result.data!.locationName;
+          _latitude = result.data!.latitude;
+          _longitude = result.data!.longitude;
+          _locationError = null;
+        } else {
+          _locationError = result.errorMessage;
+          // Handle specific permission issues
+          if (result.permissionStatus == LocationPermissionStatus.deniedForever) {
+            _showLocationSettingsDialog();
+          } else if (result.permissionStatus == LocationPermissionStatus.serviceDisabled) {
+            _showEnableLocationDialog();
+          }
+        }
+      });
+    }
+  }
+
+  void _showLocationSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Permission Required'),
+        content: const Text(
+          'Location permission is permanently denied. Please enable it in your device settings to use this feature.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _locationService.openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEnableLocationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Services Disabled'),
+        content: const Text(
+          'Please enable location services (GPS) to detect your location automatically.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _locationService.openLocationSettings();
+            },
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
-    _interestController.dispose();
     super.dispose();
   }
 
@@ -142,13 +232,119 @@ class _EditInformationState extends State<EditInformation> {
               SizedBox(height: 8.h),
               _buildInputField(context, 'Current Age', numeric: true, controller: _ageController),
               SizedBox(height: 16.h),
-              _buildInterestsEditor(theme),
+              _buildLocationField(theme),
               SizedBox(height: 40.h),
               _buildButton(context, widget.editType == 'Edit Profile' ? 'Save Changes' : 'Continue'),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLocationField(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.location_on_outlined,
+              size: 20.sp,
+              color: theme.primaryColor,
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              'Location',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8.h),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(8.r),
+            border: _locationError != null
+                ? Border.all(color: Colors.red.shade300, width: 1)
+                : null,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_location != null && _location!.isNotEmpty)
+                      Text(
+                        _location!,
+                        style: theme.textTheme.bodyLarge,
+                      )
+                    else
+                      Text(
+                        'Tap to detect your location',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.hintColor,
+                        ),
+                      ),
+                    if (_locationError != null) ...[
+                      SizedBox(height: 4.h),
+                      Text(
+                        _locationError!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.red.shade400,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(width: 8.w),
+              _isDetectingLocation
+                  ? SizedBox(
+                      width: 24.w,
+                      height: 24.h,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.primaryColor,
+                      ),
+                    )
+                  : IconButton(
+                      onPressed: _detectLocation,
+                      icon: Icon(
+                        _location != null ? Icons.refresh : Icons.my_location,
+                        color: theme.primaryColor,
+                      ),
+                      tooltip: _location != null ? 'Refresh location' : 'Detect location',
+                    ),
+            ],
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Row(
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 14.sp,
+              color: theme.hintColor,
+            ),
+            SizedBox(width: 6.w),
+            Expanded(
+              child: Text(
+                'Location is auto-detected to ensure authentic matching',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.hintColor,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -194,61 +390,6 @@ class _EditInformationState extends State<EditInformation> {
     );
   }
 
-  Widget _buildInterestsEditor(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Interests', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _interestController,
-          decoration: InputDecoration(
-            hintText: 'Add an interest and tap +',
-            filled: true,
-            fillColor: theme.cardColor,
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: _addInterest,
-            ),
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
-          ),
-          onSubmitted: (_) => _addInterest(),
-          style: theme.textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _currentInterests
-              .map(
-                (item) => Chip(
-                  label: Text(item),
-                  onDeleted: () {
-                    setState(() {
-                      _currentInterests.remove(item);
-                    });
-                  },
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  void _addInterest() {
-    final v = _interestController.text.trim();
-    if (v.isEmpty) return;
-    if (!_currentInterests.contains(v)) {
-      setState(() {
-        _currentInterests.add(v);
-      });
-    }
-    _interestController.clear();
-  }
-
   Widget _buildButton(BuildContext context, String buttonText) {
     final theme = Theme.of(context);
     return ElevatedButton(
@@ -280,6 +421,9 @@ class _EditInformationState extends State<EditInformation> {
               newGender != (user.gender ?? '') ||
               newAge != (user.age ?? '') ||
               targetPicChanged ||
+              _location != user.location ||
+              _latitude != user.latitude ||
+              _longitude != user.longitude ||
               !_listEqualsIgnoreOrder(trimmedInterests, user.interests ?? []);
 
           if (!hasChanges) {
@@ -315,6 +459,10 @@ class _EditInformationState extends State<EditInformation> {
             'age': newAge,
             'profilePicUrl': profilePicUrl,
             'interests': trimmedInterests,
+            'location': _location,
+            'latitude': _latitude,
+            'longitude': _longitude,
+            'locationUpdatedAt': _location != null ? Timestamp.now() : null,
           };
 
           await FirestoreService().updateUser(user.uid, updatedDataForFirebase);
@@ -331,6 +479,10 @@ class _EditInformationState extends State<EditInformation> {
             chatPreferences: user.chatPreferences,
             privacySettings: user.privacySettings,
             verificationLevel: user.verificationLevel,
+            location: _location,
+            latitude: _latitude,
+            longitude: _longitude,
+            locationUpdatedAt: _location != null ? Timestamp.now() : null,
           );
 
           await mymodel.User.saveToPrefs(updatedUserForPrefs);
