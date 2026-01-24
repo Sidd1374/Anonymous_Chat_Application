@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,7 @@ import 'package:veil_chat_application/widgets/user_card.dart' as uc;
 import 'package:veil_chat_application/models/user_model.dart';
 import 'package:veil_chat_application/services/relationship_service.dart';
 import 'package:veil_chat_application/services/chat_service.dart';
+import 'package:veil_chat_application/services/presence_service.dart';
 
 // Make sure FriendsPage is a StatefulWidget
 class FriendsPage extends StatefulWidget {
@@ -20,21 +22,33 @@ class FriendsPage extends StatefulWidget {
 class _FriendsPageState extends State<FriendsPage> {
   final RelationshipService _relationshipService = RelationshipService();
   final ChatService _chatService = ChatService();
-  
+  final PresenceService _presenceService = PresenceService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   // Current user
   String? _currentUserId;
   User? _currentUser;
-  
+
   // Friends data
   List<Map<String, dynamic>> _allFriends = [];
   List<Map<String, dynamic>> _filteredFriends = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
   bool _hasInitialized = false;
-  
+
+  // Presence data cache (friendId -> UserPresence)
+  Map<String, UserPresence> _presenceCache = {};
+
+  // Chat room data cache (friendId -> chat room data)
+  Map<String, Map<String, dynamic>> _chatRoomCache = {};
+
+  // Stream subscriptions
+  Map<String, StreamSubscription<UserPresence>> _presenceSubscriptions = {};
+  Map<String, StreamSubscription<DocumentSnapshot>> _chatRoomSubscriptions = {};
+
   // Cache keys
   static const String _cacheKey = 'friends_list_cache';
-  
+
   // Stream subscription
   StreamSubscription<List<Map<String, dynamic>>>? _friendsSubscription;
 
@@ -55,13 +69,26 @@ class _FriendsPageState extends State<FriendsPage> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _friendsSubscription?.cancel();
+
+    // Cancel all presence subscriptions
+    for (final sub in _presenceSubscriptions.values) {
+      sub.cancel();
+    }
+    _presenceSubscriptions.clear();
+
+    // Cancel all chat room subscriptions
+    for (final sub in _chatRoomSubscriptions.values) {
+      sub.cancel();
+    }
+    _chatRoomSubscriptions.clear();
+
     super.dispose();
   }
 
   Future<void> _initializeFriends() async {
     if (_hasInitialized) return;
     _hasInitialized = true;
-    
+
     try {
       // Get current user
       _currentUser = await User.getFromPrefs();
@@ -82,9 +109,8 @@ class _FriendsPageState extends State<FriendsPage> {
       }
 
       // Subscribe to friends stream for real-time updates
-      _friendsSubscription = _relationshipService
-          .streamFriendsWithDetails(_currentUserId!)
-          .listen(
+      _friendsSubscription =
+          _relationshipService.streamFriendsWithDetails(_currentUserId!).listen(
         (friends) async {
           if (mounted) {
             if (!_areListsEqual(_allFriends, friends)) {
@@ -94,6 +120,9 @@ class _FriendsPageState extends State<FriendsPage> {
                 _isLoading = false;
               });
               await _saveToCache(friends);
+
+              // Subscribe to presence and chat room updates for each friend
+              _subscribeToFriendsData(friends);
             } else if (_isLoading) {
               setState(() {
                 _isLoading = false;
@@ -120,15 +149,83 @@ class _FriendsPageState extends State<FriendsPage> {
     }
   }
 
+  void _subscribeToFriendsData(List<Map<String, dynamic>> friends) {
+    // Get the set of current friend IDs
+    final currentFriendIds = friends.map((f) => f['odId'] as String).toSet();
+
+    // Cancel subscriptions for friends that are no longer in the list
+    final idsToRemove = _presenceSubscriptions.keys
+        .where((id) => !currentFriendIds.contains(id))
+        .toList();
+
+    for (final id in idsToRemove) {
+      _presenceSubscriptions[id]?.cancel();
+      _presenceSubscriptions.remove(id);
+      _chatRoomSubscriptions[id]?.cancel();
+      _chatRoomSubscriptions.remove(id);
+      _presenceCache.remove(id);
+      _chatRoomCache.remove(id);
+    }
+
+    // Subscribe to new friends
+    for (final friend in friends) {
+      final friendId = friend['odId'] as String;
+      final chatRoomId = friend['chatRoomId'] as String?;
+
+      // Subscribe to presence if not already subscribed
+      if (!_presenceSubscriptions.containsKey(friendId)) {
+        _presenceSubscriptions[friendId] =
+            _presenceService.streamUserPresence(friendId).listen((presence) {
+          if (mounted) {
+            setState(() {
+              _presenceCache[friendId] = presence;
+            });
+          }
+        });
+      }
+
+      // Subscribe to chat room for unread count and last message
+      if (chatRoomId != null && !_chatRoomSubscriptions.containsKey(friendId)) {
+        _chatRoomSubscriptions[friendId] = _firestore
+            .collection('chats')
+            .doc(chatRoomId)
+            .snapshots()
+            .listen((snapshot) {
+          if (mounted && snapshot.exists) {
+            final data = snapshot.data() as Map<String, dynamic>;
+            final user1Id = data['user1Id'] as String?;
+            final user1UnreadCount = data['user1UnreadCount'] as int? ?? 0;
+            final user2UnreadCount = data['user2UnreadCount'] as int? ?? 0;
+
+            // Determine which unread count belongs to current user
+            final myUnreadCount =
+                _currentUserId == user1Id ? user1UnreadCount : user2UnreadCount;
+
+            setState(() {
+              _chatRoomCache[friendId] = {
+                'lastMessage': data['lastMessage'],
+                'lastMessageAt': data['lastMessageAt'],
+                'lastMessageSenderId': data['lastMessageSenderId'],
+                'lastMessageIsDeleted': data['lastMessageIsDeleted'] ?? false,
+                'unreadCount': myUnreadCount,
+              };
+            });
+          }
+        });
+      }
+    }
+  }
+
   Future<void> _loadFromCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cachedData = prefs.getString('${_cacheKey}_$_currentUserId');
-      
+
       if (cachedData != null) {
         final List<dynamic> decoded = jsonDecode(cachedData);
-        final friends = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
-        
+        final friends =
+            decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+
         if (mounted && _allFriends.isEmpty) {
           setState(() {
             _allFriends = friends;
@@ -145,13 +242,15 @@ class _FriendsPageState extends State<FriendsPage> {
   Future<void> _saveToCache(List<Map<String, dynamic>> friends) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('${_cacheKey}_$_currentUserId', jsonEncode(friends));
+      await prefs.setString(
+          '${_cacheKey}_$_currentUserId', jsonEncode(friends));
     } catch (e) {
       print('Error saving friends to cache: $e');
     }
   }
 
-  bool _areListsEqual(List<Map<String, dynamic>> list1, List<Map<String, dynamic>> list2) {
+  bool _areListsEqual(
+      List<Map<String, dynamic>> list1, List<Map<String, dynamic>> list2) {
     if (list1.length != list2.length) return false;
     for (int i = 0; i < list1.length; i++) {
       if (list1[i]['odId'] != list2[i]['odId']) return false;
@@ -161,14 +260,15 @@ class _FriendsPageState extends State<FriendsPage> {
 
   Future<void> _onRefresh() async {
     if (_currentUserId == null) return;
-    
+
     setState(() {
       _isRefreshing = true;
     });
 
     try {
-      final friends = await _relationshipService.getFriendsWithDetails(_currentUserId!);
-      
+      final friends =
+          await _relationshipService.getFriendsWithDetails(_currentUserId!);
+
       if (mounted) {
         setState(() {
           _allFriends = friends;
@@ -176,6 +276,7 @@ class _FriendsPageState extends State<FriendsPage> {
           _isRefreshing = false;
         });
         await _saveToCache(friends);
+        _subscribeToFriendsData(friends);
       }
     } catch (e) {
       print('Error refreshing friends: $e');
@@ -202,12 +303,12 @@ class _FriendsPageState extends State<FriendsPage> {
       if (query.isEmpty) {
         _filteredFriends = List.from(_allFriends);
       } else {
-        _filteredFriends = _allFriends
-            .where((friend) {
-              final name = (friend['fullName'] ?? friend['name'] ?? '').toString().toLowerCase();
-              return name.startsWith(query.toLowerCase());
-            })
-            .toList();
+        _filteredFriends = _allFriends.where((friend) {
+          final name = (friend['fullName'] ?? friend['name'] ?? '')
+              .toString()
+              .toLowerCase();
+          return name.startsWith(query.toLowerCase());
+        }).toList();
       }
     });
   }
@@ -223,6 +324,37 @@ class _FriendsPageState extends State<FriendsPage> {
   bool _isVerified(Map<String, dynamic> friend) {
     final level = friend['verificationLevel'];
     return level != null && level >= 2;
+  }
+
+  String? _formatLastMessage(String friendId) {
+    final chatData = _chatRoomCache[friendId];
+    if (chatData == null) return null;
+
+    final isDeleted = chatData['lastMessageIsDeleted'] as bool? ?? false;
+    if (isDeleted) return 'Message deleted';
+
+    final lastMessage = chatData['lastMessage'] as String?;
+    if (lastMessage == null || lastMessage.isEmpty) return null;
+
+    if (lastMessage.length > 25) {
+      return '${lastMessage.substring(0, 25)}...';
+    }
+    return lastMessage;
+  }
+
+  String? _formatLastSeen(String friendId) {
+    final presence = _presenceCache[friendId];
+    if (presence == null) return null;
+    if (presence.isOnline) return 'Online';
+    return presence.formatLastSeen();
+  }
+
+  bool _isOnline(String friendId) {
+    return _presenceCache[friendId]?.isOnline ?? false;
+  }
+
+  int _getUnreadCountForFriend(String friendId) {
+    return _chatRoomCache[friendId]?['unreadCount'] as int? ?? 0;
   }
 
   @override
@@ -265,8 +397,8 @@ class _FriendsPageState extends State<FriendsPage> {
                     "assets/icons/icon_search.svg",
                     height: 36,
                     width: 36,
-                    colorFilter: ColorFilter.mode(theme.primaryColor,
-                        BlendMode.srcIn),
+                    colorFilter:
+                        ColorFilter.mode(theme.primaryColor, BlendMode.srcIn),
                   ),
                 ),
               ],
@@ -331,7 +463,8 @@ class _FriendsPageState extends State<FriendsPage> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: [
                               SizedBox(
-                                height: MediaQuery.of(context).size.height * 0.5,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.5,
                                 child: Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -346,8 +479,10 @@ class _FriendsPageState extends State<FriendsPage> {
                                         _searchController.text.isEmpty
                                             ? "No friends yet"
                                             : "No results found for '${_searchController.text}'",
-                                        style: theme.textTheme.titleMedium?.copyWith(
-                                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withOpacity(0.7),
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
@@ -355,8 +490,10 @@ class _FriendsPageState extends State<FriendsPage> {
                                         const SizedBox(height: 8),
                                         Text(
                                           "Match with someone and like each other\nto become friends!\n\nPull down to refresh",
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme.onSurface
+                                                .withOpacity(0.5),
                                           ),
                                           textAlign: TextAlign.center,
                                         ),
@@ -376,29 +513,38 @@ class _FriendsPageState extends State<FriendsPage> {
                               maxCrossAxisExtent: 180.0,
                               crossAxisSpacing: 16,
                               mainAxisSpacing: 16,
-                              childAspectRatio: 0.80,
+                              childAspectRatio: 0.78,
                             ),
                             itemBuilder: (context, index) {
                               final friend = _filteredFriends[index];
                               final name = _getDisplayName(friend);
                               final image = _getProfileImage(friend);
                               final isVerified = _isVerified(friend);
-                              final gender = friend['gender']?.toString() ?? 'Unknown';
-                              final age = friend['age']?.toString() ?? '?';
-                              final friendId = friend['odId'] ?? friend['uid'] ?? '';
+                              final friendId =
+                                  friend['odId'] ?? friend['uid'] ?? '';
                               final chatRoomId = friend['chatRoomId'] ?? '';
+
+                              // Get real-time data
+                              final isOnline = _isOnline(friendId);
+                              final lastSeen = _formatLastSeen(friendId);
+                              final lastMessage = _formatLastMessage(friendId);
+                              final unreadCount =
+                                  _getUnreadCountForFriend(friendId);
 
                               return uc.UserCard(
                                 name: name,
-                                gender: gender,
-                                age: age,
                                 imagePath: image,
                                 isLevel2Verified: isVerified,
-                                address: '',
+                                isOnline: isOnline,
+                                lastSeen: lastSeen,
+                                lastMessage: lastMessage,
+                                unreadCount: unreadCount,
                                 onPressed: () async {
-                                  if (chatRoomId.isEmpty && _currentUserId != null) {
+                                  if (chatRoomId.isEmpty &&
+                                      _currentUserId != null) {
                                     // Get or create chat room
-                                    final chatRoom = await _chatService.getChatRoomBetweenUsers(
+                                    final chatRoom = await _chatService
+                                        .getChatRoomBetweenUsers(
                                       _currentUserId!,
                                       friendId,
                                     );

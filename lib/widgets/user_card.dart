@@ -4,21 +4,23 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 class UserCard extends StatelessWidget {
   final String name;
-  final String gender;
-  final String age;
   final String imagePath;
   final bool isLevel2Verified;
-  final String? address;
+  final bool isOnline;
+  final String? lastSeen;
+  final String? lastMessage;
+  final int unreadCount;
   final VoidCallback? onPressed;
 
   const UserCard({
     super.key,
     required this.name,
-    required this.gender,
-    required this.age,
     required this.imagePath,
     this.isLevel2Verified = false,
-    this.address,
+    this.isOnline = false,
+    this.lastSeen,
+    this.lastMessage,
+    this.unreadCount = 0,
     this.onPressed,
   });
 
@@ -30,7 +32,7 @@ class UserCard extends StatelessWidget {
       onTap: onPressed,
       child: Container(
         width: 180,
-        height: 243,
+        height: 230,
         clipBehavior: Clip.antiAlias,
         decoration: ShapeDecoration(
           color: Theme.of(context).colorScheme.secondary,
@@ -48,82 +50,146 @@ class UserCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Age
+            // Profile Image with Online Indicator
             Positioned(
-              left: 20,
-              top: 181,
-              child: SizedBox(
-                width: 140,
-                child: Text(
-                  age,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
-                    fontSize: 12,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w300,
+              left: 40,
+              top: 20,
+              child: Stack(
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: ShapeDecoration(
+                      image: DecorationImage(
+                        image: imagePath.startsWith('http')
+                            ? CachedNetworkImageProvider(imagePath)
+                            : AssetImage(imagePath) as ImageProvider,
+                        fit: BoxFit.cover,
+                      ),
+                      shape: OvalBorder(
+                        side: BorderSide(
+                          width: 2,
+                          color: isOnline
+                              ? const Color(0xFF4CAF50)
+                              : Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-            // Gender
-            Positioned(
-              left: 20,
-              top: 161,
-              child: SizedBox(
-                width: 140,
-                child: Text(
-                  gender,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: theme.textTheme.bodyMedium?.color ??
-                        const Color(0xFF282725),
-                    fontSize: 12,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w300,
+                  // Online status indicator
+                  Positioned(
+                    right: 4,
+                    bottom: 4,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: isOnline
+                            ? const Color(0xFF4CAF50)
+                            : Colors.grey.shade500,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.secondary,
+                          width: 2.5,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
             // Name
             Positioned(
-              left: 20,
-              top: 137,
-              child: SizedBox(
-                width: 140,
-                child: Text(
-                  name,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: theme.textTheme.bodyLarge?.color ??
-                        const Color(0xFF282725),
-                    fontSize: 16,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                  ),
+              left: 10,
+              top: 126,
+              right: 10,
+              child: Text(
+                name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: theme.textTheme.bodyLarge?.color ??
+                      const Color(0xFF282725),
+                  fontSize: 15,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Profile Image
+            // Last Seen / Online Status
             Positioned(
-              left: 40,
-              top: 24,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: ShapeDecoration(
-                  image: DecorationImage(
-                    image: imagePath.startsWith('http')
-                        ? CachedNetworkImageProvider(imagePath)
-                        : AssetImage(imagePath) as ImageProvider,
-                    fit: BoxFit.cover,
+              left: 10,
+              top: 146,
+              right: 10,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isOnline ? Icons.circle : Icons.access_time,
+                    size: 10,
+                    color: isOnline
+                        ? const Color(0xFF4CAF50)
+                        : theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
                   ),
-                  shape: OvalBorder(
-                    side: BorderSide(
-                      width: 2,
-                      color: Theme.of(context).colorScheme.primary,
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      isOnline ? 'Online' : (lastSeen ?? 'Offline'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isOnline
+                            ? const Color(0xFF4CAF50)
+                            : theme.textTheme.bodyMedium?.color
+                                ?.withOpacity(0.6),
+                        fontSize: 11,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w400,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                ],
+              ),
+            ),
+            // Last Message or Unread Count
+            Positioned(
+              left: 12,
+              top: 168,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: unreadCount > 0
+                      ? theme.colorScheme.primary.withOpacity(0.15)
+                      : theme.colorScheme.surface.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  unreadCount > 0
+                      ? (unreadCount > 10
+                          ? '10+ new messages'
+                          : '$unreadCount new message${unreadCount > 1 ? 's' : ''}')
+                      : (lastMessage ?? 'No messages yet'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: unreadCount > 0
+                        ? theme.colorScheme.primary
+                        : (lastMessage != null
+                            ? theme.textTheme.bodyMedium?.color
+                            : theme.textTheme.bodyMedium?.color
+                                ?.withOpacity(0.5)),
+                    fontSize: 11,
+                    fontFamily: 'Inter',
+                    fontWeight:
+                        unreadCount > 0 ? FontWeight.w600 : FontWeight.w400,
+                    fontStyle: lastMessage == null && unreadCount == 0
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -133,29 +199,41 @@ class UserCard extends StatelessWidget {
                 right: 10,
                 top: 10,
                 child: SvgPicture.asset(
-                  'assets/icons/icon_verified.svg', // Change path as needed
+                  'assets/icons/icon_verified.svg',
                   width: 25,
                   height: 25,
                 ),
               ),
-            // // Address (if verified)
-            // if (isLevel2Verified && address != null && address!.isNotEmpty)
-            //   Positioned(
-            //     left: 10,
-            //     bottom: 8,
-            //     right: 10,
-            //     child: Text(
-            //       address!,
-            //       textAlign: TextAlign.center,
-            //       style: TextStyle(
-            //         color: AppTheme.cardAddressColor(context),
-            //         fontSize: 11,
-            //         fontWeight: FontWeight.w400,
-            //       ),
-            //       maxLines: 2,
-            //       overflow: TextOverflow.ellipsis,
-            //     ),
-            //   ),
+            // Unread Message Badge
+            if (unreadCount > 0)
+              Positioned(
+                left: 8,
+                top: 8,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withOpacity(0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimary,
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
