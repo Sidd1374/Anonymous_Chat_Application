@@ -2,19 +2,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Enum to represent the type of message
 enum MessageType {
-  text,     // Regular text message
-  image,    // Image message
-  system,   // System notification (e.g., "You are now friends!")
-  like,     // Like action notification
+  text, // Regular text message
+  image, // Image message
+  system, // System notification (e.g., "You are now friends!")
+  like, // Like action notification
 }
 
 /// Enum to represent message delivery status
 enum MessageStatus {
-  sending,   // Message is being sent
-  sent,      // Message sent to server
+  sending, // Message is being sent
+  sent, // Message sent to server
   delivered, // Message delivered to recipient's device
-  read,      // Message has been read by recipient
-  failed,    // Message failed to send
+  read, // Message has been read by recipient
+  failed, // Message failed to send
 }
 
 class Message {
@@ -30,8 +30,13 @@ class Message {
   final Timestamp? readAt;
   final bool isDeleted;
   final Timestamp? deletedAt;
-  final Map<String, dynamic>? metadata; // For additional data (e.g., image dimensions)
-  
+  final Map<String, dynamic>?
+      metadata; // For additional data (e.g., image dimensions)
+
+  // Reactions: Map of emoji -> list of user IDs who reacted
+  // Example: { "❤️": ["uid1", "uid2"], "😂": ["uid3"] }
+  final Map<String, List<String>>? reactions;
+
   // Reply fields
   final String? replyToMessageId;
   final String? replyToText;
@@ -52,11 +57,35 @@ class Message {
     this.isDeleted = false,
     this.deletedAt,
     this.metadata,
+    this.reactions,
     this.replyToMessageId,
     this.replyToText,
     this.replyToSenderId,
     this.replyToType,
   });
+
+  /// Get total reaction count
+  int get totalReactionCount {
+    if (reactions == null) return 0;
+    return reactions!.values.fold(0, (sum, list) => sum + list.length);
+  }
+
+  /// Check if a user has reacted with a specific emoji
+  bool hasUserReacted(String userId, String emoji) {
+    if (reactions == null) return false;
+    return reactions![emoji]?.contains(userId) ?? false;
+  }
+
+  /// Get the emoji a user reacted with (returns first one if multiple)
+  String? getUserReaction(String userId) {
+    if (reactions == null) return null;
+    for (final entry in reactions!.entries) {
+      if (entry.value.contains(userId)) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
 
   /// Generate a unique message ID using timestamp and sender ID
   static String generateMessageId(String senderId) {
@@ -127,6 +156,15 @@ class Message {
       isDeleted: json['isDeleted'] as bool? ?? false,
       deletedAt: deletedAtTimestamp,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      // Parse reactions map
+      reactions: json['reactions'] != null
+          ? (json['reactions'] as Map<String, dynamic>).map(
+              (key, value) => MapEntry(
+                key,
+                (value as List<dynamic>).map((e) => e as String).toList(),
+              ),
+            )
+          : null,
       // Reply fields
       replyToMessageId: json['replyToMessageId'] as String?,
       replyToText: json['replyToText'] as String?,
@@ -155,6 +193,7 @@ class Message {
       'isDeleted': isDeleted,
       'deletedAt': deletedAt,
       'metadata': metadata,
+      'reactions': reactions,
       // Reply fields
       'replyToMessageId': replyToMessageId,
       'replyToText': replyToText,
@@ -178,6 +217,7 @@ class Message {
     bool? isDeleted,
     Timestamp? deletedAt,
     Map<String, dynamic>? metadata,
+    Map<String, List<String>>? reactions,
     String? replyToMessageId,
     String? replyToText,
     String? replyToSenderId,
@@ -197,6 +237,7 @@ class Message {
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: deletedAt ?? this.deletedAt,
       metadata: metadata ?? this.metadata,
+      reactions: reactions ?? this.reactions,
       replyToMessageId: replyToMessageId ?? this.replyToMessageId,
       replyToText: replyToText ?? this.replyToText,
       replyToSenderId: replyToSenderId ?? this.replyToSenderId,

@@ -4,17 +4,17 @@ import 'package:veil_chat_application/models/message_model.dart';
 import 'package:veil_chat_application/models/chat_room_model.dart';
 
 /// Service class for handling real-time chat functionality with Firebase Firestore
-/// 
+///
 /// Firebase Structure:
 /// - chats/{chatRoomId}/
 ///   - userData (fields: user IDs, names, etc.)
 ///   - messages/{messageId} (message documents)
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   // Collection references
   CollectionReference get _chatsCollection => _firestore.collection('chats');
-  
+
   /// Get messages collection reference for a specific chat room
   CollectionReference _messagesCollection(String chatRoomId) {
     return _chatsCollection.doc(chatRoomId).collection('messages');
@@ -35,7 +35,7 @@ class ChatService {
   }) async {
     // Generate unique chat room ID
     final chatRoomId = ChatRoom.generateChatRoomId(user1Id, user2Id);
-    
+
     // Check if chat room already exists
     final existingRoom = await getChatRoom(chatRoomId);
     if (existingRoom != null) {
@@ -84,7 +84,8 @@ class ChatService {
   }
 
   /// Get chat room between two specific users
-  Future<ChatRoom?> getChatRoomBetweenUsers(String userId1, String userId2) async {
+  Future<ChatRoom?> getChatRoomBetweenUsers(
+      String userId1, String userId2) async {
     final chatRoomId = ChatRoom.generateChatRoomId(userId1, userId2);
     return getChatRoom(chatRoomId);
   }
@@ -98,8 +99,10 @@ class ChatService {
   }
 
   /// Add chat room reference to user's document
-  Future<void> _addChatRoomToUser(String userId, String chatRoomId, ChatRoomType type) async {
-    final field = type == ChatRoomType.stranger ? 'strangerChats' : 'friendChats';
+  Future<void> _addChatRoomToUser(
+      String userId, String chatRoomId, ChatRoomType type) async {
+    final field =
+        type == ChatRoomType.stranger ? 'strangerChats' : 'friendChats';
     await _firestore.collection('users').doc(userId).update({
       field: FieldValue.arrayUnion([chatRoomId]),
     }).catchError((e) {
@@ -111,8 +114,10 @@ class ChatService {
   }
 
   /// Remove chat room reference from user's document
-  Future<void> _removeChatRoomFromUser(String userId, String chatRoomId, ChatRoomType type) async {
-    final field = type == ChatRoomType.stranger ? 'strangerChats' : 'friendChats';
+  Future<void> _removeChatRoomFromUser(
+      String userId, String chatRoomId, ChatRoomType type) async {
+    final field =
+        type == ChatRoomType.stranger ? 'strangerChats' : 'friendChats';
     await _firestore.collection('users').doc(userId).update({
       field: FieldValue.arrayRemove([chatRoomId]),
     });
@@ -130,7 +135,7 @@ class ChatService {
     Message? replyToMessage,
   }) async {
     final messageId = Message.generateMessageId(senderId);
-    
+
     final message = Message(
       messageId: messageId,
       senderId: senderId,
@@ -142,8 +147,8 @@ class ChatService {
       createdAt: Timestamp.now(),
       // Reply fields
       replyToMessageId: replyToMessage?.messageId,
-      replyToText: replyToMessage?.type == MessageType.image 
-          ? '📷 Image' 
+      replyToText: replyToMessage?.type == MessageType.image
+          ? '📷 Image'
           : replyToMessage?.text,
       replyToSenderId: replyToMessage?.senderId,
       replyToType: replyToMessage?.type,
@@ -168,7 +173,7 @@ class ChatService {
     Message? replyToMessage,
   }) async {
     final messageId = Message.generateMessageId(senderId);
-    
+
     final message = Message(
       messageId: messageId,
       senderId: senderId,
@@ -181,8 +186,8 @@ class ChatService {
       metadata: metadata,
       // Reply fields
       replyToMessageId: replyToMessage?.messageId,
-      replyToText: replyToMessage?.type == MessageType.image 
-          ? '📷 Image' 
+      replyToText: replyToMessage?.type == MessageType.image
+          ? '📷 Image'
           : replyToMessage?.text,
       replyToSenderId: replyToMessage?.senderId,
       replyToType: replyToMessage?.type,
@@ -202,7 +207,7 @@ class ChatService {
     required String user2Id,
   }) async {
     final messageId = Message.generateMessageId('system');
-    
+
     final message = Message(
       messageId: messageId,
       senderId: 'system',
@@ -215,7 +220,7 @@ class ChatService {
     );
 
     await _messagesCollection(chatRoomId).doc(messageId).set(message.toJson());
-    
+
     // Update last message without incrementing unread count for system messages
     await _chatsCollection.doc(chatRoomId).update({
       'lastMessage': text,
@@ -227,12 +232,14 @@ class ChatService {
   }
 
   /// Update chat room with last message info and increment unread count
-  Future<void> _updateLastMessage(String chatRoomId, Message message, String receiverId) async {
+  Future<void> _updateLastMessage(
+      String chatRoomId, Message message, String receiverId) async {
     final chatRoom = await getChatRoom(chatRoomId);
     if (chatRoom == null) return;
 
     final updates = <String, dynamic>{
-      'lastMessage': message.type == MessageType.image ? '📷 Image' : message.text,
+      'lastMessage':
+          message.type == MessageType.image ? '📷 Image' : message.text,
       'lastMessageAt': message.createdAt,
       'lastMessageSenderId': message.senderId,
       'lastMessageIsDeleted': false, // Reset deleted flag for new messages
@@ -256,10 +263,10 @@ class ChatService {
         .limitToLast(limit)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            return Message.fromJson(doc.data() as Map<String, dynamic>, doc.id);
-          }).toList();
-        });
+      return snapshot.docs.map((doc) {
+        return Message.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    });
   }
 
   /// Get paginated messages (for loading older messages)
@@ -278,7 +285,8 @@ class ChatService {
 
     final snapshot = await query.get();
     return snapshot.docs
-        .map((doc) => Message.fromJson(doc.data() as Map<String, dynamic>, doc.id))
+        .map((doc) =>
+            Message.fromJson(doc.data() as Map<String, dynamic>, doc.id))
         .toList()
         .reversed
         .toList(); // Return in chronological order
@@ -286,11 +294,8 @@ class ChatService {
 
   /// Mark messages as read
   /// If hideReadReceipts is true, only updates unread count but doesn't mark messages as read
-  Future<void> markMessagesAsRead(
-    String chatRoomId, 
-    String currentUserId, 
-    {bool hideReadReceipts = false}
-  ) async {
+  Future<void> markMessagesAsRead(String chatRoomId, String currentUserId,
+      {bool hideReadReceipts = false}) async {
     final chatRoom = await getChatRoom(chatRoomId);
     if (chatRoom == null) return;
 
@@ -310,8 +315,10 @@ class ChatService {
     // that haven't been read yet (status is 'sent' or 'delivered')
     final unreadMessagesQuery = await _messagesCollection(chatRoomId)
         .where('receiverId', isEqualTo: currentUserId)
-        .where('status', whereIn: [MessageStatus.sent.name, MessageStatus.delivered.name])
-        .get();
+        .where('status', whereIn: [
+      MessageStatus.sent.name,
+      MessageStatus.delivered.name
+    ]).get();
 
     if (unreadMessagesQuery.docs.isEmpty) return;
 
@@ -329,33 +336,34 @@ class ChatService {
   /// Only the sender can delete within 15 minutes of sending
   /// Returns: 'success', 'not_sender', 'time_expired', or 'error'
   Future<String> deleteMessage({
-    required String chatRoomId, 
+    required String chatRoomId,
     required String messageId,
     required String currentUserId,
   }) async {
     try {
       // Get the message to validate
-      final messageDoc = await _messagesCollection(chatRoomId).doc(messageId).get();
+      final messageDoc =
+          await _messagesCollection(chatRoomId).doc(messageId).get();
       if (!messageDoc.exists) return 'error';
-      
+
       final messageData = messageDoc.data() as Map<String, dynamic>;
       final senderId = messageData['senderId'] as String;
       final createdAt = messageData['createdAt'] as Timestamp;
-      
+
       // Check if current user is the sender
       if (senderId != currentUserId) {
         return 'not_sender';
       }
-      
+
       // Check if within 15 minutes
       final messageTime = createdAt.toDate();
       final now = DateTime.now();
       final difference = now.difference(messageTime);
-      
+
       if (difference.inMinutes > 15) {
         return 'time_expired';
       }
-      
+
       // Soft delete the message
       await _messagesCollection(chatRoomId).doc(messageId).update({
         'isDeleted': true,
@@ -363,7 +371,7 @@ class ChatService {
         'text': null,
         'imageUrl': null,
       });
-      
+
       // Check if this was the last message and update chat room preview
       final chatRoom = await getChatRoom(chatRoomId);
       if (chatRoom != null && chatRoom.lastMessageSenderId == currentUserId) {
@@ -373,7 +381,7 @@ class ChatService {
           'lastMessageIsDeleted': true,
         });
       }
-      
+
       return 'success';
     } catch (e) {
       print('Error deleting message: $e');
@@ -388,21 +396,27 @@ class ChatService {
     if (message.isDeleted) {
       return {'canDelete': false, 'reason': 'Message already deleted'};
     }
-    
+
     // Check if current user is the sender
     if (message.senderId != currentUserId) {
-      return {'canDelete': false, 'reason': 'You can only delete your own messages'};
+      return {
+        'canDelete': false,
+        'reason': 'You can only delete your own messages'
+      };
     }
-    
+
     // Check time limit (15 minutes)
     final messageTime = message.createdAt.toDate();
     final now = DateTime.now();
     final difference = now.difference(messageTime);
-    
+
     if (difference.inMinutes > 15) {
-      return {'canDelete': false, 'reason': 'Messages can only be deleted within 15 minutes'};
+      return {
+        'canDelete': false,
+        'reason': 'Messages can only be deleted within 15 minutes'
+      };
     }
-    
+
     final minutesLeft = 15 - difference.inMinutes;
     return {'canDelete': true, 'minutesLeft': minutesLeft};
   }
@@ -417,8 +431,10 @@ class ChatService {
 
     final isUser1 = currentUserId == chatRoom.user1Id;
     final currentLikeField = isUser1 ? 'user1HasLiked' : 'user2HasLiked';
-    final currentLikeStatus = isUser1 ? chatRoom.user1HasLiked : chatRoom.user2HasLiked;
-    final otherLikeStatus = isUser1 ? chatRoom.user2HasLiked : chatRoom.user1HasLiked;
+    final currentLikeStatus =
+        isUser1 ? chatRoom.user1HasLiked : chatRoom.user2HasLiked;
+    final otherLikeStatus =
+        isUser1 ? chatRoom.user2HasLiked : chatRoom.user1HasLiked;
 
     // Toggle the like status
     final newLikeStatus = !currentLikeStatus;
@@ -472,8 +488,10 @@ class ChatService {
     print('Updated roomType to friend');
 
     // Move chat room reference from strangerChats to friendChats for both users
-    await _removeChatRoomFromUser(chatRoom.user1Id, chatRoomId, ChatRoomType.stranger);
-    await _removeChatRoomFromUser(chatRoom.user2Id, chatRoomId, ChatRoomType.stranger);
+    await _removeChatRoomFromUser(
+        chatRoom.user1Id, chatRoomId, ChatRoomType.stranger);
+    await _removeChatRoomFromUser(
+        chatRoom.user2Id, chatRoomId, ChatRoomType.stranger);
     await _addChatRoomToUser(chatRoom.user1Id, chatRoomId, ChatRoomType.friend);
     await _addChatRoomToUser(chatRoom.user2Id, chatRoomId, ChatRoomType.friend);
     print('Updated chat room references');
@@ -525,11 +543,11 @@ class ChatService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          print('Found ${snapshot.docs.length} total chat rooms');
-          return snapshot.docs.map((doc) {
-            return ChatRoom.fromJson(doc.data() as Map<String, dynamic>, doc.id);
-          }).toList();
-        });
+      print('Found ${snapshot.docs.length} total chat rooms');
+      return snapshot.docs.map((doc) {
+        return ChatRoom.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    });
   }
 
   /// Stream only friend chat rooms
@@ -545,18 +563,18 @@ class ChatService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-          print('Found ${snapshot.docs.length} friend chat rooms');
-          return snapshot.docs.map((doc) {
-            return ChatRoom.fromJson(doc.data() as Map<String, dynamic>, doc.id);
-          }).toList();
-        });
+      print('Found ${snapshot.docs.length} friend chat rooms');
+      return snapshot.docs.map((doc) {
+        return ChatRoom.fromJson(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    });
   }
 
   /// Stream only stranger chat rooms (history/recent matches)
   /// Uses two separate queries to avoid complex OR filter index issues
   Stream<List<ChatRoom>> streamStrangerChatRooms(String userId) {
     print('Streaming stranger chat rooms for user: $userId');
-    
+
     // Query where user is user1
     final query1 = _chatsCollection
         .where('user1Id', isEqualTo: userId)
@@ -580,27 +598,29 @@ class ChatService {
           .get();
 
       final allDocs = <String, dynamic>{};
-      
+
       // Add docs from query1
       for (final doc in snapshot1.docs) {
         allDocs[doc.id] = doc.data();
       }
-      
+
       // Add docs from query2 (avoiding duplicates)
       for (final doc in snapshot2.docs) {
         allDocs[doc.id] = doc.data();
       }
 
-      print('Found ${allDocs.length} stranger chat rooms (user1: ${snapshot1.docs.length}, user2: ${snapshot2.docs.length})');
-      
+      print(
+          'Found ${allDocs.length} stranger chat rooms (user1: ${snapshot1.docs.length}, user2: ${snapshot2.docs.length})');
+
       final chatRooms = allDocs.entries.map((entry) {
         print('Chat room: ${entry.key}');
-        return ChatRoom.fromJson(entry.value as Map<String, dynamic>, entry.key);
+        return ChatRoom.fromJson(
+            entry.value as Map<String, dynamic>, entry.key);
       }).toList();
 
       // Sort by createdAt descending
       chatRooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      
+
       return chatRooms;
     });
   }
@@ -620,7 +640,7 @@ class ChatService {
   /// This should be called periodically (e.g., from a Cloud Function or app startup)
   Future<void> cleanupExpiredStrangerChats() async {
     final now = Timestamp.now();
-    
+
     final expiredChats = await _chatsCollection
         .where('roomType', isEqualTo: ChatRoomType.stranger.name)
         .where('status', isEqualTo: ChatRoomStatus.active.name)
@@ -641,37 +661,41 @@ class ChatService {
   Future<void> blockUser(String chatRoomId, String blockerUserId) async {
     final chatRoom = await getChatRoom(chatRoomId);
     if (chatRoom == null) return;
-    
+
     final blockedUserId = chatRoom.getOtherUserId(blockerUserId);
-    
+
     // Update chat room status
     await _chatsCollection.doc(chatRoomId).update({
       'status': ChatRoomStatus.blocked.name,
       'blockedBy': blockerUserId,
       'blockedAt': Timestamp.now(),
     });
-    
+
     // Add to blocker's blockedUsers list
     await _firestore.collection('users').doc(blockerUserId).set({
-      'blockedUsers': FieldValue.arrayUnion([{
-        'userId': blockedUserId,
-        'chatRoomId': chatRoomId,
-        'blockedAt': Timestamp.now(),
-      }]),
+      'blockedUsers': FieldValue.arrayUnion([
+        {
+          'userId': blockedUserId,
+          'chatRoomId': chatRoomId,
+          'blockedAt': Timestamp.now(),
+        }
+      ]),
     }, SetOptions(merge: true));
   }
 
   /// Unblock a user
-  Future<void> unblockUser(String chatRoomId, String unblockerUserId, String blockedUserId) async {
+  Future<void> unblockUser(
+      String chatRoomId, String unblockerUserId, String blockedUserId) async {
     // Update chat room status back to active
     await _chatsCollection.doc(chatRoomId).update({
       'status': ChatRoomStatus.active.name,
       'blockedBy': FieldValue.delete(),
       'blockedAt': FieldValue.delete(),
     });
-    
+
     // Remove from unblocker's blockedUsers list
-    final userDoc = await _firestore.collection('users').doc(unblockerUserId).get();
+    final userDoc =
+        await _firestore.collection('users').doc(unblockerUserId).get();
     if (userDoc.exists) {
       final data = userDoc.data() as Map<String, dynamic>?;
       final blockedUsers = data?['blockedUsers'] as List<dynamic>? ?? [];
@@ -681,7 +705,7 @@ class ChatService {
         }
         return true;
       }).toList();
-      
+
       await _firestore.collection('users').doc(unblockerUserId).update({
         'blockedUsers': updatedList,
       });
@@ -694,7 +718,7 @@ class ChatService {
     if (chatRoom == null || chatRoom.status != ChatRoomStatus.blocked) {
       return null;
     }
-    
+
     final doc = await _chatsCollection.doc(chatRoomId).get();
     final data = doc.data() as Map<String, dynamic>?;
     return {
@@ -707,22 +731,26 @@ class ChatService {
   Future<List<Map<String, dynamic>>> getBlockedUsers(String userId) async {
     final userDoc = await _firestore.collection('users').doc(userId).get();
     if (!userDoc.exists) return [];
-    
+
     final data = userDoc.data() as Map<String, dynamic>?;
     final blockedUsers = data?['blockedUsers'] as List<dynamic>? ?? [];
-    
+
     final result = <Map<String, dynamic>>[];
     for (final blocked in blockedUsers) {
       if (blocked is Map<String, dynamic>) {
         // Get the blocked user's details
         final blockedUserId = blocked['userId'] as String?;
         if (blockedUserId != null) {
-          final blockedUserDoc = await _firestore.collection('users').doc(blockedUserId).get();
+          final blockedUserDoc =
+              await _firestore.collection('users').doc(blockedUserId).get();
           if (blockedUserDoc.exists) {
-            final blockedUserData = blockedUserDoc.data() as Map<String, dynamic>;
+            final blockedUserData =
+                blockedUserDoc.data() as Map<String, dynamic>;
             result.add({
               ...blocked,
-              'name': blockedUserData['fullName'] ?? blockedUserData['name'] ?? 'Unknown',
+              'name': blockedUserData['fullName'] ??
+                  blockedUserData['name'] ??
+                  'Unknown',
               'profilePicUrl': blockedUserData['profilePicUrl'],
             });
           }
@@ -736,9 +764,9 @@ class ChatService {
   Future<void> unfriendUser(String chatRoomId, String currentUserId) async {
     final chatRoom = await getChatRoom(chatRoomId);
     if (chatRoom == null) return;
-    
+
     final otherUserId = chatRoom.getOtherUserId(currentUserId);
-    
+
     // Remove from both users' friends lists
     await _firestore.collection('users').doc(currentUserId).update({
       'friends': FieldValue.arrayRemove([otherUserId]),
@@ -746,21 +774,23 @@ class ChatService {
     await _firestore.collection('users').doc(otherUserId).update({
       'friends': FieldValue.arrayRemove([currentUserId]),
     });
-    
+
     // Update chat room references
-    await _removeChatRoomFromUser(currentUserId, chatRoomId, ChatRoomType.friend);
+    await _removeChatRoomFromUser(
+        currentUserId, chatRoomId, ChatRoomType.friend);
     await _removeChatRoomFromUser(otherUserId, chatRoomId, ChatRoomType.friend);
     await _addChatRoomToUser(currentUserId, chatRoomId, ChatRoomType.stranger);
     await _addChatRoomToUser(otherUserId, chatRoomId, ChatRoomType.stranger);
-    
+
     // Convert chat room back to stranger with new 48-hour expiry
     await _chatsCollection.doc(chatRoomId).update({
       'roomType': ChatRoomType.stranger.name,
-      'expiresAt': Timestamp.fromDate(DateTime.now().add(const Duration(hours: 48))),
+      'expiresAt':
+          Timestamp.fromDate(DateTime.now().add(const Duration(hours: 48))),
       'user1HasLiked': false,
       'user2HasLiked': false,
     });
-    
+
     // Send system message
     await sendSystemMessage(
       chatRoomId: chatRoomId,
@@ -781,24 +811,28 @@ class ChatService {
     // Flag the chat room as reported
     await _chatsCollection.doc(chatRoomId).update({
       'isReported': true,
-      'reports': FieldValue.arrayUnion([{
-        'reporterId': reporterId,
-        'reason': reason,
-        'details': details,
-        'reportedAt': Timestamp.now(),
-      }]),
+      'reports': FieldValue.arrayUnion([
+        {
+          'reporterId': reporterId,
+          'reason': reason,
+          'details': details,
+          'reportedAt': Timestamp.now(),
+        }
+      ]),
     });
-    
+
     // Increment report count on the reported user's profile
     await _firestore.collection('users').doc(reportedUserId).set({
       'reportCount': FieldValue.increment(1),
-      'reportHistory': FieldValue.arrayUnion([{
-        'reporterId': reporterId,
-        'chatRoomId': chatRoomId,
-        'reason': reason,
-        'details': details,
-        'reportedAt': Timestamp.now(),
-      }]),
+      'reportHistory': FieldValue.arrayUnion([
+        {
+          'reporterId': reporterId,
+          'chatRoomId': chatRoomId,
+          'reason': reason,
+          'details': details,
+          'reportedAt': Timestamp.now(),
+        }
+      ]),
     }, SetOptions(merge: true));
   }
 
@@ -814,5 +848,111 @@ class ChatService {
 
     // Delete the chat room document
     await _chatsCollection.doc(chatRoomId).delete();
+  }
+
+  // ==================== REACTION OPERATIONS ====================
+
+  /// Available reaction emojis
+  static const List<String> availableReactions = [
+    '❤️',
+    '😂',
+    '😮',
+    '😢',
+    '😡',
+    '👍'
+  ];
+
+  /// Toggle a reaction on a message
+  /// If the user already reacted with this emoji, remove it
+  /// If the user reacted with a different emoji, replace it
+  /// If the user hasn't reacted, add the reaction
+  Future<void> toggleReaction({
+    required String chatRoomId,
+    required String messageId,
+    required String userId,
+    required String emoji,
+  }) async {
+    final messageRef = _messagesCollection(chatRoomId).doc(messageId);
+
+    await _firestore.runTransaction((transaction) async {
+      final messageDoc = await transaction.get(messageRef);
+      if (!messageDoc.exists) return;
+
+      final data = messageDoc.data() as Map<String, dynamic>;
+      final reactions = Map<String, List<String>>.from(
+        (data['reactions'] as Map<String, dynamic>?)?.map(
+              (key, value) => MapEntry(key, List<String>.from(value as List)),
+            ) ??
+            {},
+      );
+
+      // Check if user already reacted with any emoji
+      String? existingReaction;
+      for (final entry in reactions.entries) {
+        if (entry.value.contains(userId)) {
+          existingReaction = entry.key;
+          break;
+        }
+      }
+
+      if (existingReaction != null) {
+        // Remove existing reaction
+        reactions[existingReaction]!.remove(userId);
+        if (reactions[existingReaction]!.isEmpty) {
+          reactions.remove(existingReaction);
+        }
+
+        // If same emoji, just remove (toggle off)
+        if (existingReaction == emoji) {
+          transaction.update(messageRef, {'reactions': reactions});
+          return;
+        }
+      }
+
+      // Add new reaction
+      if (!reactions.containsKey(emoji)) {
+        reactions[emoji] = [];
+      }
+      reactions[emoji]!.add(userId);
+
+      transaction.update(messageRef, {'reactions': reactions});
+    });
+  }
+
+  /// Remove all reactions from a user on a message
+  Future<void> removeReaction({
+    required String chatRoomId,
+    required String messageId,
+    required String userId,
+  }) async {
+    final messageRef = _messagesCollection(chatRoomId).doc(messageId);
+
+    await _firestore.runTransaction((transaction) async {
+      final messageDoc = await transaction.get(messageRef);
+      if (!messageDoc.exists) return;
+
+      final data = messageDoc.data() as Map<String, dynamic>;
+      final reactions = Map<String, List<String>>.from(
+        (data['reactions'] as Map<String, dynamic>?)?.map(
+              (key, value) => MapEntry(key, List<String>.from(value as List)),
+            ) ??
+            {},
+      );
+
+      // Remove user from all reaction lists
+      bool modified = false;
+      for (final emoji in reactions.keys.toList()) {
+        if (reactions[emoji]!.remove(userId)) {
+          modified = true;
+          if (reactions[emoji]!.isEmpty) {
+            reactions.remove(emoji);
+          }
+        }
+      }
+
+      if (modified) {
+        transaction.update(messageRef, {'reactions': reactions});
+      }
+    });
   }
 }

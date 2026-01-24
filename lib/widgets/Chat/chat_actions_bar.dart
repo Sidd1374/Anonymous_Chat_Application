@@ -9,16 +9,18 @@ class ChatActionsBar extends StatelessWidget {
   final VoidCallback? onHeartPress;
   final VoidCallback? onCameraPress;
   final Function(Uint8List imageBytes)? onImagePaste;
+  final Function(String)? onTextChanged;
   final bool hasLiked;
   final bool isFriend;
 
   const ChatActionsBar({
-    super.key, 
-    required this.inputTextController, 
+    super.key,
+    required this.inputTextController,
     required this.onSend,
     this.onHeartPress,
     this.onCameraPress,
     this.onImagePaste,
+    this.onTextChanged,
     this.hasLiked = false,
     this.isFriend = false,
   });
@@ -35,11 +37,11 @@ class ChatActionsBar extends StatelessWidget {
         if (!isFriend)
           ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: hasLiked 
-                    ? Colors.red.shade100 
+                backgroundColor: hasLiked
+                    ? Colors.red.shade100
                     : Theme.of(context).colorScheme.secondary,
-                foregroundColor: hasLiked 
-                    ? Colors.red 
+                foregroundColor: hasLiked
+                    ? Colors.red
                     : Theme.of(context).colorScheme.primary,
                 fixedSize: Size(50, 50),
                 elevation: hasLiked ? 6 : 4,
@@ -53,7 +55,7 @@ class ChatActionsBar extends StatelessWidget {
                       'assets/icons/icon_heart.svg',
                       width: 32,
                     )),
-          if (!isFriend) const SizedBox(width: 0),
+        if (!isFriend) const SizedBox(width: 0),
 
         // Camera button
         ElevatedButton(
@@ -75,7 +77,7 @@ class ChatActionsBar extends StatelessWidget {
               ),
             )),
         const SizedBox(width: 0),
-        
+
         Expanded(
             child: Material(
           elevation: 4,
@@ -93,7 +95,12 @@ class ChatActionsBar extends StatelessWidget {
 
             // Enable content insertion for images from keyboard
             contentInsertionConfiguration: ContentInsertionConfiguration(
-              allowedMimeTypes: const ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+              allowedMimeTypes: const [
+                'image/png',
+                'image/jpeg',
+                'image/gif',
+                'image/webp'
+              ],
               onContentInserted: (KeyboardInsertedContent content) async {
                 if (content.data != null && onImagePaste != null) {
                   onImagePaste!(content.data!);
@@ -104,6 +111,8 @@ class ChatActionsBar extends StatelessWidget {
             onSubmitted: (text) {
               onSend(text);
             }, // Implementation of Send function.
+
+            onChanged: onTextChanged, // Typing detection callback
 
             // Styling
             style: TextStyle(
@@ -144,13 +153,13 @@ class ChatActionsBar extends StatelessWidget {
 
         ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                foregroundColor: Theme.of(context).colorScheme.primary,
-                fixedSize: Size(50, 50),
-                padding: EdgeInsets.all(0),
-                elevation: 4,
-                shape: const CircleBorder(),
-                ),
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+              foregroundColor: Theme.of(context).colorScheme.primary,
+              fixedSize: Size(50, 50),
+              padding: EdgeInsets.all(0),
+              elevation: 4,
+              shape: const CircleBorder(),
+            ),
             onPressed: () {
               onSend(inputTextController.text);
             },

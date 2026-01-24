@@ -7,9 +7,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:veil_chat_application/widgets/Chat/chat_text.dart';
 import 'package:veil_chat_application/widgets/Chat/chat_actions_bar.dart';
 import 'package:veil_chat_application/widgets/Chat/chat_image_message.dart';
+import 'package:veil_chat_application/widgets/Chat/reaction_picker.dart';
 import 'package:veil_chat_application/models/message_model.dart';
 import 'package:veil_chat_application/models/chat_room_model.dart';
 import 'package:veil_chat_application/services/chat_service.dart';
+import 'package:veil_chat_application/services/presence_service.dart';
 import 'package:veil_chat_application/services/cloudinary_service.dart';
 import 'package:veil_chat_application/models/user_model.dart';
 import 'package:veil_chat_application/views/profile/profile_page.dart';
@@ -36,12 +38,13 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
   final TextEditingController _inputTextController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ChatService _chatService = ChatService();
+  final PresenceService _presenceService = PresenceService();
   final ImagePicker _imagePicker = ImagePicker();
 
   // Current user info
   String? _currentUserId;
   User? _currentUser;
-  
+
   // Chat state
   List<Message> _messages = [];
   ChatRoom? _chatRoom;
@@ -49,13 +52,23 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
   bool _hasLiked = false;
   bool _otherHasLiked = false;
   bool _isSending = false;
-  
+
+  // Presence state
+  bool _isOtherUserOnline = false;
+  bool _isOtherUserTyping = false;
+  String _lastSeenText = '';
+
+  // Reaction picker state
+  String? _showReactionPickerForMessageId;
+
   // Reply state
   Message? _replyToMessage;
-  
+
   // Streams
   StreamSubscription<List<Message>>? _messagesSubscription;
   StreamSubscription<ChatRoom?>? _chatRoomSubscription;
+  StreamSubscription<UserPresence>? _presenceSubscription;
+  StreamSubscription<Map<String, bool>>? _typingSubscription;
 
   @override
   void initState() {
@@ -67,10 +80,17 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // Clear typing status when leaving chat
+    if (_currentUserId != null) {
+      _presenceService.clearTyping(widget.chatId, _currentUserId!);
+    }
     _inputTextController.dispose();
     _scrollController.dispose();
     _messagesSubscription?.cancel();
     _chatRoomSubscription?.cancel();
+    _presenceSubscription?.cancel();
+    _typingSubscription?.cancel();
+    _presenceService.dispose();
     super.dispose();
   }
 
@@ -78,9 +98,10 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _currentUserId != null) {
       // Mark messages as read when app comes to foreground (respecting privacy settings)
-      final hideReadReceipts = _currentUser?.privacySettings?.hideReadReceipts ?? false;
+      final hideReadReceipts =
+          _currentUser?.privacySettings?.hideReadReceipts ?? false;
       _chatService.markMessagesAsRead(
-        widget.chatId, 
+        widget.chatId,
         _currentUserId!,
         hideReadReceipts: hideReadReceipts,
       );
@@ -110,6 +131,40 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
         return;
       }
       _currentUserId = _currentUser!.uid;
+
+      // Set current user as online
+      _presenceService.setOnlineStatus(_currentUserId!, true);
+
+      // Subscribe to other user's presence (online/last seen)
+      _presenceSubscription =
+          _presenceService.streamUserPresence(widget.otherUserId).listen(
+        (presence) {
+          if (mounted) {
+            setState(() {
+              _isOtherUserOnline = presence.isOnline;
+              _lastSeenText = presence.formatLastSeen();
+            });
+          }
+        },
+        onError: (error) {
+          print('Error streaming presence: $error');
+        },
+      );
+
+      // Subscribe to typing status in this chat
+      _typingSubscription =
+          _presenceService.streamTypingStatus(widget.chatId).listen(
+        (typingMap) {
+          if (mounted) {
+            setState(() {
+              _isOtherUserTyping = typingMap[widget.otherUserId] ?? false;
+            });
+          }
+        },
+        onError: (error) {
+          print('Error streaming typing status: $error');
+        },
+      );
 
       // Subscribe to chat room updates
       _chatRoomSubscription = _chatService.streamChatRoom(widget.chatId).listen(
@@ -152,13 +207,13 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
       );
 
       // Mark existing messages as read (respecting privacy settings)
-      final hideReadReceipts = _currentUser?.privacySettings?.hideReadReceipts ?? false;
+      final hideReadReceipts =
+          _currentUser?.privacySettings?.hideReadReceipts ?? false;
       await _chatService.markMessagesAsRead(
-        widget.chatId, 
+        widget.chatId,
         _currentUserId!,
         hideReadReceipts: hideReadReceipts,
       );
-
     } catch (e) {
       print('Error initializing chat: $e');
       if (mounted) {
@@ -186,6 +241,9 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
     setState(() {
       _isSending = true;
     });
+
+    // Clear typing status when sending
+    _presenceService.clearTyping(widget.chatId, _currentUserId!);
 
     try {
       await _chatService.sendMessage(
@@ -225,8 +283,9 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
     if (_currentUserId == null) return;
 
     try {
-      final becameFriends = await _chatService.toggleLike(widget.chatId, _currentUserId!);
-      
+      final becameFriends =
+          await _chatService.toggleLike(widget.chatId, _currentUserId!);
+
       if (becameFriends && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -354,9 +413,12 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
     bool isPrimary = true,
   }) {
     final theme = Theme.of(context);
-    final color = isPrimary ? theme.colorScheme.primary : theme.colorScheme.secondary;
-    final iconColor = isPrimary ? theme.colorScheme.primary : theme.textTheme.bodyLarge?.color;
-    
+    final color =
+        isPrimary ? theme.colorScheme.primary : theme.colorScheme.secondary;
+    final iconColor = isPrimary
+        ? theme.colorScheme.primary
+        : theme.textTheme.bodyLarge?.color;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -367,10 +429,12 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
             decoration: BoxDecoration(
               color: color.withOpacity(isPrimary ? 0.15 : 1.0),
               shape: BoxShape.circle,
-              border: isPrimary ? null : Border.all(
-                color: theme.colorScheme.primary.withOpacity(0.3),
-                width: 2,
-              ),
+              border: isPrimary
+                  ? null
+                  : Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.3),
+                      width: 2,
+                    ),
             ),
             child: Icon(
               icon,
@@ -450,10 +514,12 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                 ElevatedButton.icon(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close, color: Colors.white),
-                  label: const Text('Cancel', style: TextStyle(color: Colors.white)),
+                  label: const Text('Cancel',
+                      style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade400,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                     ),
@@ -467,10 +533,12 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                     _uploadAndSendImage(imageFile);
                   },
                   icon: const Icon(Icons.send, color: Colors.white),
-                  label: const Text('Send', style: TextStyle(color: Colors.white)),
+                  label:
+                      const Text('Send', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade400,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(25),
                     ),
@@ -530,17 +598,17 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
       print('File path: ${imageFile.path}');
       print('File exists: ${await imageFile.exists()}');
       print('File size: ${await imageFile.length()} bytes');
-      
+
       // Upload image to Cloudinary
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final publicId = 'chat_${widget.chatId}_$timestamp';
-      
+
       final uploadResult = await cloudinary.uploadFileUnsigned(
         filePath: imageFile.path,
         folder: 'ChatImages/${widget.chatId}',
         publicId: publicId,
       );
-      
+
       print('Upload complete!');
       print('Image URL: ${uploadResult.secureUrl}');
       print('Public ID: ${uploadResult.publicId}');
@@ -559,7 +627,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
         replyToMessage: _replyToMessage,
       );
       print('Image message sent!');
-      
+
       // Clear reply state after sending
       if (_replyToMessage != null) {
         setState(() {
@@ -569,7 +637,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -590,13 +658,13 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
       print('Stack trace: $stackTrace');
       // Close loading dialog
       if (mounted) Navigator.pop(context);
-      
+
       if (mounted) {
         String errorMessage = 'Failed to send image.';
         if (e.toString().contains('network')) {
           errorMessage = 'Network error. Please check your connection.';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -634,13 +702,55 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
 
     // Create a temporary file from the bytes
     final tempDir = await Directory.systemTemp.createTemp('pasted_image');
-    final tempFile = File('${tempDir.path}/pasted_image_${DateTime.now().millisecondsSinceEpoch}.png');
+    final tempFile = File(
+        '${tempDir.path}/pasted_image_${DateTime.now().millisecondsSinceEpoch}.png');
     await tempFile.writeAsBytes(imageBytes);
 
     // Show preview dialog
     if (mounted) {
       _showImagePreview(tempFile);
     }
+  }
+
+  /// Handle typing detection - call this when text input changes
+  void _handleTyping(String text) {
+    if (_currentUserId == null) return;
+
+    if (text.isNotEmpty) {
+      _presenceService.setTypingStatus(widget.chatId, _currentUserId!, true);
+    } else {
+      _presenceService.setTypingStatus(widget.chatId, _currentUserId!, false);
+    }
+  }
+
+  /// Handle reaction tap on a message
+  Future<void> _handleReactionTap(Message message, String emoji) async {
+    if (_currentUserId == null) return;
+
+    // Close the reaction picker
+    setState(() {
+      _showReactionPickerForMessageId = null;
+    });
+
+    // Toggle the reaction
+    await _chatService.toggleReaction(
+      chatRoomId: widget.chatId,
+      messageId: message.messageId,
+      userId: _currentUserId!,
+      emoji: emoji,
+    );
+  }
+
+  /// Show reaction picker for a message
+  void _showReactionPicker(Message message) {
+    setState(() {
+      // Toggle: if already showing for this message, hide it
+      if (_showReactionPickerForMessageId == message.messageId) {
+        _showReactionPickerForMessageId = null;
+      } else {
+        _showReactionPickerForMessageId = message.messageId;
+      }
+    });
   }
 
   Widget _buildMessageItem(Message message) {
@@ -688,8 +798,8 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
             borderRadius: BorderRadius.circular(8),
             border: Border(
               left: BorderSide(
-                color: isReplyToMe 
-                    ? theme.colorScheme.primary 
+                color: isReplyToMe
+                    ? theme.colorScheme.primary
                     : theme.colorScheme.tertiary,
                 width: 3,
               ),
@@ -703,8 +813,8 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                 isReplyToMe ? 'You' : (replySenderName ?? 'User'),
                 style: theme.textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isReplyToMe 
-                      ? theme.colorScheme.primary 
+                  color: isReplyToMe
+                      ? theme.colorScheme.primary
                       : theme.colorScheme.tertiary,
                   fontSize: 11,
                 ),
@@ -719,14 +829,16 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                       child: Icon(
                         Icons.image,
                         size: 14,
-                        color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color:
+                            theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                       ),
                     ),
                   Flexible(
                     child: Text(
                       message.replyToText ?? '',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color:
+                            theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                         fontSize: 12,
                       ),
                       maxLines: 2,
@@ -743,12 +855,15 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
 
     // Main message content
     Widget messageContent = Column(
-      crossAxisAlignment: isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment:
+          isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         // Show reply preview above image messages
         if (message.type == MessageType.image && replyPreview != null)
           replyPreview,
-        if (message.type == MessageType.image && message.imageUrl != null && !message.isDeleted)
+        if (message.type == MessageType.image &&
+            message.imageUrl != null &&
+            !message.isDeleted)
           ChatImageMessage(
             imageUrl: message.imageUrl!,
             isSender: isSender,
@@ -766,6 +881,28 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
             onReplyTap: message.replyToMessageId != null
                 ? () => _scrollToMessage(message.replyToMessageId!)
                 : null,
+          ),
+        // Display reactions if any
+        if (message.reactions != null && message.reactions!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: MessageReactions(
+              reactions: message.reactions,
+              currentUserId: _currentUserId ?? '',
+              onReactionTap: (emoji) => _handleReactionTap(message, emoji),
+            ),
+          ),
+        // Show reaction picker if active for this message
+        if (_showReactionPickerForMessageId == message.messageId)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: ReactionPicker(
+              currentUserReaction:
+                  message.getUserReaction(_currentUserId ?? ''),
+              onReactionSelected: (emoji) => _handleReactionTap(message, emoji),
+              onClose: () =>
+                  setState(() => _showReactionPickerForMessageId = null),
+            ),
           ),
         Padding(
           padding: const EdgeInsets.only(top: 4),
@@ -803,7 +940,9 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
     if (!message.isDeleted) {
       messageContent = Dismissible(
         key: Key(message.messageId),
-        direction: isSender ? DismissDirection.endToStart : DismissDirection.startToEnd,
+        direction: isSender
+            ? DismissDirection.endToStart
+            : DismissDirection.startToEnd,
         confirmDismiss: (direction) async {
           // Set reply state and return false to prevent actual dismissal
           setState(() {
@@ -821,6 +960,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
         ),
         child: GestureDetector(
           onLongPress: () => _showMessageOptions(message),
+          onDoubleTap: () => _showReactionPicker(message),
           child: messageContent,
         ),
       );
@@ -848,9 +988,10 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
   void _showMessageOptions(Message message) {
     final theme = Theme.of(context);
     final isSender = message.isSentByMe(_currentUserId ?? '');
-    final canDeleteInfo = _chatService.canDeleteMessage(message, _currentUserId ?? '');
+    final canDeleteInfo =
+        _chatService.canDeleteMessage(message, _currentUserId ?? '');
     final canDelete = canDeleteInfo['canDelete'] as bool;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -889,12 +1030,13 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
               if (isSender)
                 ListTile(
                   leading: Icon(
-                    Icons.delete, 
+                    Icons.delete,
                     color: canDelete ? Colors.red : Colors.grey,
                   ),
                   title: Text('Delete'),
-                  subtitle: canDelete 
-                      ? Text('${canDeleteInfo['minutesLeft']} min left to delete')
+                  subtitle: canDelete
+                      ? Text(
+                          '${canDeleteInfo['minutesLeft']} min left to delete')
                       : Text(canDeleteInfo['reason'] ?? 'Cannot delete'),
                   enabled: canDelete,
                   onTap: canDelete
@@ -978,225 +1120,264 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
         return true;
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProfilePage(
-                  isViewingOther: true,
-                  otherUserId: widget.otherUserId,
-                ),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-          children: [
-            CircleAvatar(
-              backgroundImage: currentUserImage.startsWith('http')
-                  ? NetworkImage(currentUserImage) as ImageProvider
-                  : AssetImage(currentUserImage),
-              radius: 18,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    currentUserName,
-                    style: Theme.of(context).textTheme.titleMedium,
+        appBar: AppBar(
+          title: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfilePage(
+                    isViewingOther: true,
+                    otherUserId: widget.otherUserId,
                   ),
-                  if (_chatRoom != null && _chatRoom!.roomType == ChatRoomType.stranger)
-                    Text(
-                      _otherHasLiked ? '❤️ Liked you!' : 'Tap to view profile',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
-                        color: _otherHasLiked ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: currentUserImage.startsWith('http')
+                        ? NetworkImage(currentUserImage) as ImageProvider
+                        : AssetImage(currentUserImage),
+                    radius: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          currentUserName,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        // Dynamic status: Typing > Online > Last Seen > Room type info
+                        Text(
+                          _isOtherUserTyping
+                              ? 'Typing...'
+                              : (_isOtherUserOnline
+                                  ? '● Online'
+                                  : (_lastSeenText.isNotEmpty
+                                      ? 'Last seen $_lastSeenText'
+                                      : (_chatRoom != null &&
+                                              _chatRoom!.roomType ==
+                                                  ChatRoomType.stranger
+                                          ? (_otherHasLiked
+                                              ? '❤️ Liked you!'
+                                              : 'Tap to view profile')
+                                          : '✓ Friend'))),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                fontSize: 11,
+                                color: _isOtherUserTyping
+                                    ? Theme.of(context).colorScheme.primary
+                                    : (_isOtherUserOnline
+                                        ? Colors.green
+                                        : (_otherHasLiked
+                                            ? Colors.red
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withOpacity(0.6))),
+                                fontWeight:
+                                    _isOtherUserTyping ? FontWeight.w500 : null,
+                              ),
+                        ),
+                      ],
                     ),
-                  if (_chatRoom != null && _chatRoom!.roomType == ChatRoomType.friend)
-                    Text(
-                      '✓ Friend · Tap to view profile',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
-                        color: Colors.green,
-                      ),
-                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-            ),
           ),
-        ),
-        actions: [
-          // Show expiry timer for stranger chats OR infinity for friends
-          if (_chatRoom != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _chatRoom!.roomType == ChatRoomType.friend
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.all_inclusive, size: 18, color: Colors.green),
-                        Text(
-                          'Forever',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.green,
+          actions: [
+            // Show expiry timer for stranger chats OR infinity for friends
+            if (_chatRoom != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _chatRoom!.roomType == ChatRoomType.friend
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.all_inclusive,
+                              size: 18, color: Colors.green),
+                          Text(
+                            'Forever',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green,
+                            ),
                           ),
-                        ),
-                      ],
-                    )
-                  : (_chatRoom!.expiresAt != null
-                      ? StreamBuilder(
-                          stream: Stream.periodic(const Duration(minutes: 1)),
-                          builder: (context, snapshot) {
-                            final timeLeft = _chatRoom!.expiresAt!.toDate().difference(DateTime.now());
-                            if (timeLeft.isNegative) {
-                              return Text('Expired', style: TextStyle(color: Colors.red, fontSize: 12));
-                            }
-                            final hours = timeLeft.inHours;
-                            final minutes = timeLeft.inMinutes % 60;
-                            return Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.timer_outlined, size: 16, color: hours < 6 ? Colors.orange : null),
-                                Text(
-                                  '${hours}h ${minutes}m',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: hours < 6 ? Colors.orange : null,
+                        ],
+                      )
+                    : (_chatRoom!.expiresAt != null
+                        ? StreamBuilder(
+                            stream: Stream.periodic(const Duration(minutes: 1)),
+                            builder: (context, snapshot) {
+                              final timeLeft = _chatRoom!.expiresAt!
+                                  .toDate()
+                                  .difference(DateTime.now());
+                              if (timeLeft.isNegative) {
+                                return Text('Expired',
+                                    style: TextStyle(
+                                        color: Colors.red, fontSize: 12));
+                              }
+                              final hours = timeLeft.inHours;
+                              final minutes = timeLeft.inMinutes % 60;
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.timer_outlined,
+                                      size: 16,
+                                      color: hours < 6 ? Colors.orange : null),
+                                  Text(
+                                    '${hours}h ${minutes}m',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: hours < 6 ? Colors.orange : null,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            );
-                          },
-                        )
-                      : const SizedBox()),
-            ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              // Handle menu actions
-              switch (value) {
-                case 'unfriend':
-                  _showUnfriendDialog();
-                  break;
-                case 'block':
-                  _showBlockDialog();
-                  break;
-                case 'report':
-                  _showReportDialog();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              // Show unfriend option only for friends
-              if (_chatRoom?.roomType == ChatRoomType.friend)
+                                ],
+                              );
+                            },
+                          )
+                        : const SizedBox()),
+              ),
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                // Handle menu actions
+                switch (value) {
+                  case 'unfriend':
+                    _showUnfriendDialog();
+                    break;
+                  case 'block':
+                    _showBlockDialog();
+                    break;
+                  case 'report':
+                    _showReportDialog();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                // Show unfriend option only for friends
+                if (_chatRoom?.roomType == ChatRoomType.friend)
+                  PopupMenuItem(
+                    value: 'unfriend',
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_remove,
+                            size: 20, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text('Unfriend'),
+                      ],
+                    ),
+                  ),
                 PopupMenuItem(
-                  value: 'unfriend',
+                  value: 'block',
                   child: Row(
                     children: [
-                      Icon(Icons.person_remove, size: 20, color: Colors.orange),
+                      Icon(Icons.block, size: 20, color: Colors.red),
                       SizedBox(width: 8),
-                      Text('Unfriend'),
+                      Text('Block User'),
                     ],
                   ),
                 ),
-              PopupMenuItem(
-                value: 'block',
-                child: Row(
-                  children: [
-                    Icon(Icons.block, size: 20, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Block User'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'report',
-                child: Row(
-                  children: [
-                    Icon(Icons.flag, size: 20, color: Colors.amber),
-                    SizedBox(width: 8),
-                    Text('Report'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Chat messages
-                Expanded(
-                  child: _messages.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.chat_bubble_outline,
-                                size: 64,
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No messages yet',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Say hello! 👋',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.separated(
-                          controller: _scrollController,
-                          reverse: true, // Start from bottom
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            // Reverse index since ListView is reversed
-                            final reversedIndex = _messages.length - 1 - index;
-                            return _buildMessageItem(_messages[reversedIndex]);
-                          },
-                        ),
-                ),
-                // Reply bar (shown when replying to a message)
-                if (_replyToMessage != null)
-                  _buildReplyBar(),
-                // Input area
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  child: ChatActionsBar(
-                    inputTextController: _inputTextController,
-                    onSend: _handleSend,
-                    onHeartPress: _handleHeartPress,
-                    onCameraPress: _handleCameraPress,
-                    onImagePaste: _handleImagePaste,
-                    hasLiked: _hasLiked,
-                    isFriend: _chatRoom?.roomType == ChatRoomType.friend,
+                PopupMenuItem(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag, size: 20, color: Colors.amber),
+                      SizedBox(width: 8),
+                      Text('Report'),
+                    ],
                   ),
                 ),
               ],
             ),
-    ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // Chat messages
+                  Expanded(
+                    child: _messages.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.chat_bubble_outline,
+                                  size: 64,
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No messages yet',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Say hello! 👋',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            controller: _scrollController,
+                            reverse: true, // Start from bottom
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _messages.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              // Reverse index since ListView is reversed
+                              final reversedIndex =
+                                  _messages.length - 1 - index;
+                              return _buildMessageItem(
+                                  _messages[reversedIndex]);
+                            },
+                          ),
+                  ),
+                  // Reply bar (shown when replying to a message)
+                  if (_replyToMessage != null) _buildReplyBar(),
+                  // Input area
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    child: ChatActionsBar(
+                      inputTextController: _inputTextController,
+                      onSend: _handleSend,
+                      onHeartPress: _handleHeartPress,
+                      onCameraPress: _handleCameraPress,
+                      onImagePaste: _handleImagePaste,
+                      onTextChanged: _handleTyping,
+                      hasLiked: _hasLiked,
+                      isFriend: _chatRoom?.roomType == ChatRoomType.friend,
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -1204,7 +1385,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
     final theme = Theme.of(context);
     final isReplyToMe = _replyToMessage?.senderId == _currentUserId;
     final senderName = isReplyToMe ? 'yourself' : widget.userName;
-    
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8),
       padding: EdgeInsets.all(12),
@@ -1317,7 +1498,8 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('⚠️ This will:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('⚠️ This will:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   Text('• Remove them from your friends list'),
                   Text('• Move chat back to History'),
@@ -1387,7 +1569,8 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('🚫 This will:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text('🚫 This will:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
                   Text('• Stop all messages from this user'),
                   Text('• Add them to your blocked list'),
@@ -1430,7 +1613,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
     final theme = Theme.of(context);
     String? selectedReason;
     final TextEditingController detailsController = TextEditingController();
-    
+
     final reasons = [
       'Inappropriate content',
       'Harassment or bullying',
@@ -1439,7 +1622,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
       'Underage user',
       'Other',
     ];
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1462,16 +1645,16 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                 ),
                 SizedBox(height: 12),
                 ...reasons.map((reason) => RadioListTile<String>(
-                  title: Text(reason, style: TextStyle(fontSize: 14)),
-                  value: reason,
-                  groupValue: selectedReason,
-                  dense: true,
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedReason = value;
-                    });
-                  },
-                )),
+                      title: Text(reason, style: TextStyle(fontSize: 14)),
+                      value: reason,
+                      groupValue: selectedReason,
+                      dense: true,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedReason = value;
+                        });
+                      },
+                    )),
                 SizedBox(height: 12),
                 TextField(
                   controller: detailsController,
@@ -1522,7 +1705,8 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                       }
                     },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
-              child: Text('Submit Report', style: TextStyle(color: Colors.black)),
+              child:
+                  Text('Submit Report', style: TextStyle(color: Colors.black)),
             ),
           ],
         ),
