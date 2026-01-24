@@ -10,7 +10,6 @@ import 'package:veil_chat_application/core/app_theme.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/services/chat_service.dart';
 import 'package:veil_chat_application/views/settings/blocked_users_page.dart';
-import 'profile.dart';
 import 'package:veil_chat_application/widgets/docs_dialogs.dart' as dia;
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -36,20 +35,13 @@ class _SettingsPageState extends State<SettingsPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final ChatService _chatService = ChatService();
   int _blockedUsersCount = 0;
-  
-  // Age range values
-  RangeValues _ageRange = const RangeValues(18, 60);
-  static const double _minAgeLimit = 18;
-  static const double _maxAgeLimit = 60;
 
   bool _isLoading = true; // track initial data loading
   bool _pendingChange = false; // track whether settings differ from snapshot
   ImageProvider? _profileImageProvider; // cached image provider
 
-  bool _chatWithOppositeGender = false;
   bool _showProfilePhotoToStrangers = false;
   bool _showProfilePhotoToFriends = false;
-  bool _chatOnlyWithVerifiedUsers = false;
   bool _hideReadReceipts = false;
 
   @override
@@ -87,18 +79,19 @@ class _SettingsPageState extends State<SettingsPage> {
     final user = await mymodel.User.getFromPrefs();
     if (user != null) {
       debugPrint('[Settings] Loaded user from SharedPreferences (fallback)');
-      
+
       ImageProvider? imageProvider;
       if (user.profilePicUrl != null && user.profilePicUrl!.isNotEmpty) {
         try {
-          final file = await DefaultCacheManager().getSingleFile(user.profilePicUrl!);
+          final file =
+              await DefaultCacheManager().getSingleFile(user.profilePicUrl!);
           imageProvider = FileImage(file);
         } catch (e) {
           debugPrint('[Settings] Cache error: $e');
           imageProvider = CachedNetworkImageProvider(user.profilePicUrl!);
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _user = user;
@@ -122,26 +115,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _updateControllersFromUser() {
     if (_user != null) {
-      // Update chat preferences
-      if (_user!.chatPreferences != null) {
-        _chatWithOppositeGender = _user!.chatPreferences!.matchWithGender != null;
-        _chatOnlyWithVerifiedUsers = _user!.chatPreferences!.onlyVerified ?? false;
-        
-        final minAge = _user!.chatPreferences!.minAge?.toDouble() ?? _minAgeLimit;
-        final maxAge = _user!.chatPreferences!.maxAge?.toDouble() ?? _maxAgeLimit;
-        _ageRange = RangeValues(
-          minAge.clamp(_minAgeLimit, _maxAgeLimit),
-          maxAge.clamp(_minAgeLimit, _maxAgeLimit),
-        );
-      }
-      
       // Update privacy settings
       if (_user!.privacySettings != null) {
-        _showProfilePhotoToFriends = _user!.privacySettings!.showProfilePicToFriends ?? false;
-        _showProfilePhotoToStrangers = _user!.privacySettings!.showProfilePicToStrangers ?? false;
+        _showProfilePhotoToFriends =
+            _user!.privacySettings!.showProfilePicToFriends ?? false;
+        _showProfilePhotoToStrangers =
+            _user!.privacySettings!.showProfilePicToStrangers ?? false;
         _hideReadReceipts = _user!.privacySettings!.hideReadReceipts ?? false;
       }
-      
+
       // Load blocked users count
       _loadBlockedUsersCount();
     }
@@ -150,7 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadBlockedUsersCount() async {
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser == null) return;
-    
+
     try {
       final blockedUsers = await _chatService.getBlockedUsers(firebaseUser.uid);
       if (mounted) {
@@ -190,9 +172,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   mymodel.User _buildUpdatedUser(mymodel.User base) {
-    final minAge = _ageRange.start.round();
-    final maxAge = _ageRange.end.round();
-
     return mymodel.User(
       uid: base.uid,
       email: base.email,
@@ -203,16 +182,8 @@ class _SettingsPageState extends State<SettingsPage> {
       age: base.age,
       interests: base.interests,
       verificationLevel: base.verificationLevel,
-      chatPreferences: mymodel.ChatPreferences(
-        matchWithGender:
-            _chatWithOppositeGender ? (base.gender == 'Male' ? 'Female' : 'Male') : null,
-        minAge: minAge,
-        maxAge: maxAge,
-        onlyVerified: _chatOnlyWithVerifiedUsers,
-        // Preserve existing interests and dealBreakers from chat settings page
-        interests: base.chatPreferences?.interests,
-        dealBreakers: base.chatPreferences?.dealBreakers,
-      ),
+      chatPreferences:
+          base.chatPreferences, // Preserve existing chat preferences
       privacySettings: mymodel.PrivacySettings(
         showProfilePicToFriends: _showProfilePhotoToFriends,
         showProfilePicToStrangers: _showProfilePhotoToStrangers,
@@ -226,17 +197,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Map<String, dynamic> _buildUpdatedFirestoreMap() {
-    final minAge = _ageRange.start.round();
-    final maxAge = _ageRange.end.round();
-
-    // Only update the fields we're managing here - don't overwrite interests/dealBreakers
+    // Only update privacy settings - chat preferences are managed elsewhere
     return {
-      'chatPreferences.matchWithGender': _chatWithOppositeGender
-          ? (_user?.gender == 'Male' ? 'Female' : 'Male')
-          : null,
-      'chatPreferences.minAge': minAge,
-      'chatPreferences.maxAge': maxAge,
-      'chatPreferences.onlyVerified': _chatOnlyWithVerifiedUsers,
       'privacySettings': {
         'showProfilePicToFriends': _showProfilePhotoToFriends,
         'showProfilePicToStrangers': _showProfilePhotoToStrangers,
@@ -246,49 +208,43 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   bool _settingsChanged(mymodel.User a, mymodel.User b) {
-    final ap = a.chatPreferences;
-    final bp = b.chatPreferences;
     final apr = a.privacySettings;
     final bpr = b.privacySettings;
-
-    bool chatDiff = (ap?.matchWithGender ?? '') != (bp?.matchWithGender ?? '') ||
-        (ap?.minAge ?? -1) != (bp?.minAge ?? -1) ||
-        (ap?.maxAge ?? -1) != (bp?.maxAge ?? -1) ||
-        (ap?.onlyVerified ?? false) != (bp?.onlyVerified ?? false);
 
     bool privacyDiff = (apr?.showProfilePicToFriends ?? false) !=
             (bpr?.showProfilePicToFriends ?? false) ||
         (apr?.showProfilePicToStrangers ?? false) !=
             (bpr?.showProfilePicToStrangers ?? false) ||
-        (apr?.hideReadReceipts ?? false) !=
-            (bpr?.hideReadReceipts ?? false);
+        (apr?.hideReadReceipts ?? false) != (bpr?.hideReadReceipts ?? false);
 
-    return chatDiff || privacyDiff;
+    return privacyDiff;
   }
 
   Future<void> _refreshUserData() async {
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
-      debugPrint('[Settings] Manual refresh from Firestore for ${firebaseUser.uid}');
+      debugPrint(
+          '[Settings] Manual refresh from Firestore for ${firebaseUser.uid}');
       final userDoc = await _firestoreService.getUser(firebaseUser.uid);
       if (userDoc.exists) {
         final user = mymodel.User.fromJson(userDoc.data()!);
         await mymodel.User.saveToPrefs(user);
-        
+
         // Refresh image from cache
         ImageProvider? newImageProvider;
         if (user.profilePicUrl != null && user.profilePicUrl!.isNotEmpty) {
           try {
             // Force re-download to get latest
             await DefaultCacheManager().removeFile(user.profilePicUrl!);
-            final file = await DefaultCacheManager().downloadFile(user.profilePicUrl!);
+            final file =
+                await DefaultCacheManager().downloadFile(user.profilePicUrl!);
             newImageProvider = FileImage(file.file);
           } catch (e) {
             debugPrint('[Settings] Refresh cache error: $e');
             newImageProvider = CachedNetworkImageProvider(user.profilePicUrl!);
           }
         }
-        
+
         if (mounted) {
           setState(() {
             _user = user;
@@ -314,7 +270,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }) {
     final theme = Theme.of(context);
     final isEnabled = _isLevel1Verified;
-    
+
     return Opacity(
       opacity: isEnabled ? 1.0 : 0.5,
       child: SwitchListTile(
@@ -351,7 +307,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }) {
     final theme = Theme.of(context);
     final isEnabled = _isLevel2Verified;
-    
+
     return Opacity(
       opacity: isEnabled ? 1.0 : 0.5,
       child: SwitchListTile(
@@ -503,7 +459,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 preloadedImageProvider: _profileImageProvider,
               ),
             ),
-
           ).then((_) => _refreshUserData()); // Refresh data on return
         }
       },
@@ -629,133 +584,6 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 _buildProfileCard(Theme.of(context)),
                 const SizedBox(height: 30.0),
-                Text(
-                  'Chat Preferences',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18.h,
-                      ),
-                ),
-                const SizedBox(height: 16.0),
-                
-                // Age Range Setting
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Age range',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              '${_ageRange.start.round()} - ${_ageRange.end.round()}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Only match with users in this age range',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          rangeThumbShape: const RoundRangeSliderThumbShape(
-                            enabledThumbRadius: 10,
-                            elevation: 2,
-                          ),
-                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-                          activeTrackColor: Theme.of(context).primaryColor,
-                          inactiveTrackColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                          thumbColor: Theme.of(context).primaryColor,
-                          overlayColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                        ),
-                        child: RangeSlider(
-                          values: _ageRange,
-                          min: _minAgeLimit,
-                          max: _maxAgeLimit,
-                          divisions: (_maxAgeLimit - _minAgeLimit).round(),
-                          labels: RangeLabels(
-                            _ageRange.start.round().toString(),
-                            _ageRange.end.round().toString(),
-                          ),
-                          onChanged: (RangeValues values) {
-                            setState(() {
-                              _ageRange = values;
-                            });
-                          },
-                          onChangeEnd: (RangeValues values) async {
-                            await _saveLocalPreferences();
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${_minAgeLimit.round()}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
-                              ),
-                            ),
-                            Text(
-                              '${_maxAgeLimit.round()}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Opposite Gender - Level 2 Required
-                _buildLevel2Setting(
-                  context: context,
-                  title: 'Opposite gender only',
-                  subtitle: 'Match only with the opposite gender',
-                  value: _chatWithOppositeGender,
-                  onChanged: (bool value) async {
-                    setState(() {
-                      _chatWithOppositeGender = value;
-                    });
-                    await _saveLocalPreferences();
-                  },
-                ),
-                // Verified Users Only - Level 2 Required
-                _buildLevel2Setting(
-                  context: context,
-                  title: 'Verified users only',
-                  subtitle: 'Match only with Level 2 verified users',
-                  value: _chatOnlyWithVerifiedUsers,
-                  onChanged: (bool value) async {
-                    setState(() {
-                      _chatOnlyWithVerifiedUsers = value;
-                    });
-                    await _saveLocalPreferences();
-                  },
-                ),
-                const SizedBox(height: 24.0),
                 // Privacy Settings Section
                 Text(
                   'Privacy Settings',
@@ -765,7 +593,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                 ),
                 const SizedBox(height: 16.0),
-                
+
                 // Profile Photo to Strangers - Level 1 Required
                 _buildLevel1Setting(
                   context: context,
@@ -820,7 +648,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     _loadBlockedUsersCount();
                   },
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 4.0),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12.0, horizontal: 4.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -836,7 +665,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           children: [
                             if (_blockedUsersCount > 0)
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8.0, vertical: 2.0),
                                 decoration: BoxDecoration(
                                   color: Colors.red.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12.0),
@@ -851,7 +681,8 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               ),
                             SizedBox(width: 8.0),
-                            Icon(Icons.chevron_right, color: Colors.red.withOpacity(0.7)),
+                            Icon(Icons.chevron_right,
+                                color: Colors.red.withOpacity(0.7)),
                           ],
                         ),
                       ],

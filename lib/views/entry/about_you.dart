@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -41,6 +40,9 @@ class _EditInformationState extends State<EditInformation> {
   bool _isDetectingLocation = false;
   String? _locationError;
   final LocationService _locationService = LocationService();
+
+  // Track if form was submitted to show validation errors
+  bool _showValidationErrors = false;
 
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
 
@@ -90,9 +92,11 @@ class _EditInformationState extends State<EditInformation> {
         } else {
           _locationError = result.errorMessage;
           // Handle specific permission issues
-          if (result.permissionStatus == LocationPermissionStatus.deniedForever) {
+          if (result.permissionStatus ==
+              LocationPermissionStatus.deniedForever) {
             _showLocationSettingsDialog();
-          } else if (result.permissionStatus == LocationPermissionStatus.serviceDisabled) {
+          } else if (result.permissionStatus ==
+              LocationPermissionStatus.serviceDisabled) {
             _showEnableLocationDialog();
           }
         }
@@ -172,7 +176,8 @@ class _EditInformationState extends State<EditInformation> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    String appBarTitle = widget.editType == 'Edit Profile' ? "Edit Profile" : "About Me";
+    String appBarTitle =
+        widget.editType == 'Edit Profile' ? "Edit Profile" : "About Me";
 
     if (_isLoading) {
       return Scaffold(
@@ -204,37 +209,85 @@ class _EditInformationState extends State<EditInformation> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: theme.cardColor,
-                        border: Border.all(color: theme.primaryColor, width: 3.w),
+                        border: Border.all(
+                          color: (_showValidationErrors &&
+                                  _profileImage == null &&
+                                  _profileImageUrl == null)
+                              ? Colors.red
+                              : theme.primaryColor,
+                          width: 3.w,
+                        ),
                         image: _profileImage != null
-                            ? DecorationImage(image: FileImage(_profileImage!), fit: BoxFit.cover)
+                            ? DecorationImage(
+                                image: FileImage(_profileImage!),
+                                fit: BoxFit.cover)
                             : _profileImageUrl != null
-                                ? DecorationImage(image: CachedNetworkImageProvider(_profileImageUrl!), fit: BoxFit.cover)
+                                ? DecorationImage(
+                                    image: CachedNetworkImageProvider(
+                                        _profileImageUrl!),
+                                    fit: BoxFit.cover)
                                 : null,
                       ),
                       child: _profileImage == null && _profileImageUrl == null
-                          ? Icon(Icons.person, size: 80.sp, color: theme.hintColor)
+                          ? Icon(Icons.person,
+                              size: 80.sp,
+                              color: (_showValidationErrors)
+                                  ? Colors.red.shade300
+                                  : theme.hintColor)
                           : null,
                     ),
                     CircleAvatar(
                       radius: 20.r,
-                      backgroundColor: theme.primaryColor,
+                      backgroundColor: (_showValidationErrors &&
+                              _profileImage == null &&
+                              _profileImageUrl == null)
+                          ? Colors.red
+                          : theme.primaryColor,
                       child: Icon(Icons.add, color: Colors.white, size: 20.sp),
                     ),
                   ],
                 ),
               ),
+              SizedBox(height: 8.h),
+              Text(
+                "Upload Your Profile Picture",
+                style: TextStyle(
+                  color: (_showValidationErrors &&
+                          _profileImage == null &&
+                          _profileImageUrl == null)
+                      ? Colors.red
+                      : null,
+                ),
+              ),
+              if (_showValidationErrors &&
+                  _profileImage == null &&
+                  _profileImageUrl == null)
+                Padding(
+                  padding: EdgeInsets.only(top: 4.h),
+                  child: Text(
+                    '* Profile picture is required',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ),
               SizedBox(height: 20.h),
-              Text("Upload Your Profile Picture"),
-              SizedBox(height: 20.h),
-              _buildInputField(context, 'Full Name', controller: _nameController),
+              _buildInputField(context, 'Full Name',
+                  controller: _nameController),
               SizedBox(height: 8.h),
               _buildDropdownField(context, 'Gender'),
               SizedBox(height: 8.h),
-              _buildInputField(context, 'Current Age', numeric: true, controller: _ageController),
+              _buildInputField(context, 'Current Age',
+                  numeric: true, controller: _ageController),
               SizedBox(height: 16.h),
               _buildLocationField(theme),
               SizedBox(height: 40.h),
-              _buildButton(context, widget.editType == 'Edit Profile' ? 'Save Changes' : 'Continue'),
+              _buildButton(
+                  context,
+                  widget.editType == 'Edit Profile'
+                      ? 'Save Changes'
+                      : 'Continue'),
             ],
           ),
         ),
@@ -319,7 +372,9 @@ class _EditInformationState extends State<EditInformation> {
                         _location != null ? Icons.refresh : Icons.my_location,
                         color: theme.primaryColor,
                       ),
-                      tooltip: _location != null ? 'Refresh location' : 'Detect location',
+                      tooltip: _location != null
+                          ? 'Refresh location'
+                          : 'Detect location',
                     ),
             ],
           ),
@@ -362,7 +417,8 @@ class _EditInformationState extends State<EditInformation> {
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
       ),
-      style: theme.textTheme.bodyLarge?.copyWith(color: theme.textTheme.bodyLarge?.color),
+      style: theme.textTheme.bodyLarge
+          ?.copyWith(color: theme.textTheme.bodyLarge?.color),
     );
   }
 
@@ -378,7 +434,10 @@ class _EditInformationState extends State<EditInformation> {
         hintText: placeholder,
         hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
       ),
-      items: _genderOptions.map((gender) => DropdownMenuItem(value: gender, child: Text(gender, style: theme.textTheme.bodyLarge)))
+      items: _genderOptions
+          .map((gender) => DropdownMenuItem(
+              value: gender,
+              child: Text(gender, style: theme.textTheme.bodyLarge)))
           .toList(),
       onChanged: (value) {
         if (value != null) {
@@ -394,30 +453,55 @@ class _EditInformationState extends State<EditInformation> {
     final theme = Theme.of(context);
     return ElevatedButton(
       onPressed: () async {
-        if (_nameController.text.trim().isEmpty || _selectedGender == 'Select a gender' || _ageController.text.trim().isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields.')));
+        // Check for profile image first
+        if (_profileImage == null && _profileImageUrl == null) {
+          setState(() {
+            _showValidationErrors = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please upload a profile picture.')),
+          );
           return;
         }
 
-        showDialog(context: context, barrierDismissible: false, builder: (context) => const Center(child: CircularProgressIndicator()));
+        if (_nameController.text.trim().isEmpty ||
+            _selectedGender == 'Select a gender' ||
+            _ageController.text.trim().isEmpty) {
+          setState(() {
+            _showValidationErrors = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please fill all fields.')));
+          return;
+        }
+
+        showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) =>
+                const Center(child: CircularProgressIndicator()));
 
         try {
           final user = await mymodel.User.getFromPrefs();
           if (user == null) {
             Navigator.of(context, rootNavigator: true).pop();
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User not found. Please log in again.')));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('User not found. Please log in again.')));
             return;
           }
 
-          final trimmedInterests = _currentInterests.map((e) => e.trim()).where((e) => e.isNotEmpty).toSet().toList();
+          final trimmedInterests = _currentInterests
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toSet()
+              .toList();
           final currentPic = user.profilePicUrl;
           final targetPicChanged = _profileImage != null;
           final newFullName = _nameController.text.trim();
           final newGender = _selectedGender;
           final newAge = _ageController.text.trim();
 
-          final hasChanges =
-              newFullName != user.fullName ||
+          final hasChanges = newFullName != user.fullName ||
               newGender != (user.gender ?? '') ||
               newAge != (user.age ?? '') ||
               targetPicChanged ||
@@ -428,24 +512,27 @@ class _EditInformationState extends State<EditInformation> {
 
           if (!hasChanges) {
             Navigator.of(context, rootNavigator: true).pop();
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No changes to save')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No changes to save')));
             return;
           }
 
           String? profilePicUrl = currentPic;
-          
+
           if (targetPicChanged) {
             // Unsigned upload to Cloudinary in Profiles/<uid>/Avatar_<timestamp>.jpg
-            final publicId = 'Avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final publicId =
+                'Avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
             final uploadResult = await cloudinary.uploadFileUnsigned(
               filePath: _profileImage!.path,
               folder: 'Profiles/${user.uid}',
               publicId: publicId,
             );
             profilePicUrl = uploadResult.secureUrl;
-            
+
             // Warm cache so the profile image appears quickly
-            final downloadResult = await DefaultCacheManager().downloadFile(profilePicUrl);
+            final downloadResult =
+                await DefaultCacheManager().downloadFile(profilePicUrl);
             ProfileImageService().updateImageProvider(
               FileImage(downloadResult.file),
               url: profilePicUrl,
@@ -506,17 +593,20 @@ class _EditInformationState extends State<EditInformation> {
           }
         } catch (e) {
           Navigator.of(context, rootNavigator: true).pop();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save changes: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to save changes: $e')));
         }
       },
       style: ElevatedButton.styleFrom(
         minimumSize: Size(182.w, 50.h),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         backgroundColor: theme.primaryColor,
         shadowColor: theme.primaryColor,
         elevation: 5,
       ),
-      child: Text(buttonText, style: theme.textTheme.labelLarge?.copyWith(color: Colors.white)),
+      child: Text(buttonText,
+          style: theme.textTheme.labelLarge?.copyWith(color: Colors.white)),
     );
   }
 }

@@ -344,15 +344,17 @@ class _LoginState extends State<Login> {
       }
     }
   }
-  
+
 // Google Sign-In Handler
   Future<void> _handleGoogleSignIn() async {
     try {
       await GoogleSignIn.instance.initialize(
-        serverClientId: '213748404792-notissn77ktp7st6jl34q0te4s4fro1c.apps.googleusercontent.com',
+        serverClientId:
+            '213748404792-notissn77ktp7st6jl34q0te4s4fro1c.apps.googleusercontent.com',
       );
-      
-      final GoogleSignInAccount? googleUser = await GoogleSignIn.instance.authenticate();
+
+      final GoogleSignInAccount? googleUser =
+          await GoogleSignIn.instance.authenticate();
 
       if (googleUser == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -388,7 +390,8 @@ class _LoginState extends State<Login> {
           email: firebaseUser.email ?? '',
           fullName: firebaseUser.displayName ?? '',
           createdAt: Timestamp.now(),
-          profilePicUrl: firebaseUser.photoURL,
+          profilePicUrl:
+              null, // User will upload their own image in the About page
           gender: null,
           age: null,
           interests: const [],
@@ -412,7 +415,8 @@ class _LoginState extends State<Login> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => EditInformation(editType: 'about')),
+        MaterialPageRoute(
+            builder: (context) => EditInformation(editType: 'about')),
       );
     } on FirebaseAuthException catch (e) {
       _showErrorDialog(e.message ?? 'Google Sign-In failed.');

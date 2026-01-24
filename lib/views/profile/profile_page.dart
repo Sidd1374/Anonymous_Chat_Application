@@ -269,8 +269,13 @@ class _ProfilePageState extends State<ProfilePage>
         opacity: _fadeAnimation,
         child: Stack(
           children: [
-            // Full screen profile image
-            Positioned.fill(
+            // Profile image positioned in the top portion of the screen
+            // Takes up ~65% of screen height so it's visible above the sheet
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: screenHeight * 0.65,
               child: _buildProfileImage(theme),
             ),
 
