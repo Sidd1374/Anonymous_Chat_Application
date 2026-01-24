@@ -99,6 +99,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/container.dart';
+import 'package:veil_chat_application/services/presence_service.dart';
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
 // import 'models/user_model.dart';
@@ -114,20 +115,79 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final isFirstRun = prefs.getBool('isFirstRun') ?? true;
   final isLoggedIn = prefs.getString('uid') != null;
+  final userId = prefs.getString('uid');
 
   runApp(
     MyApp(
       isFirstRun: isFirstRun,
       isLoggedIn: isLoggedIn,
+      userId: userId,
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final bool isFirstRun;
   final bool isLoggedIn;
+  final String? userId;
 
-  const MyApp({super.key, required this.isFirstRun, required this.isLoggedIn});
+  const MyApp({
+    super.key,
+    required this.isFirstRun,
+    required this.isLoggedIn,
+    this.userId,
+  });
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final PresenceService _presenceService = PresenceService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // Set user online when app starts
+    if (widget.userId != null) {
+      _presenceService.setOnlineStatus(widget.userId!, true);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
+    // Set user offline when app is disposed
+    if (widget.userId != null) {
+      _presenceService.goOffline(widget.userId!);
+    }
+
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (widget.userId == null) return;
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // App is in foreground - set online
+        _presenceService.setOnlineStatus(widget.userId!, true);
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        // App is in background or closed - set offline
+        _presenceService.setOnlineStatus(widget.userId!, false);
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,9 +210,9 @@ class MyApp extends StatelessWidget {
                     debugShowCheckedModeBanner: false,
                     title: 'ChatApp title',
                     theme: appTheme.currentTheme,
-                    home: isLoggedIn
+                    home: widget.isLoggedIn
                         ? HomePageFrame()
-                        : (isFirstRun ? Welcome() : Login()),
+                        : (widget.isFirstRun ? Welcome() : Login()),
                   );
                 },
               );

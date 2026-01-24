@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
+import 'package:veil_chat_application/services/presence_service.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 import '../entry/about_you.dart';
 
@@ -25,6 +26,7 @@ class _LoginState extends State<Login> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final FirestoreService _firestoreService = FirestoreService();
+  final PresenceService _presenceService = PresenceService();
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +321,8 @@ class _LoginState extends State<Login> {
           if (userDoc.exists) {
             final user = mymodel.User.fromJson(userDoc.data()!);
             await mymodel.User.saveToPrefs(user);
+            // Set user online after login
+            await _presenceService.setOnlineStatus(user.uid, true);
             // Pre-cache profile image using ProfileImageService for faster loads
             if (user.profilePicUrl != null && user.profilePicUrl!.isNotEmpty) {
               ProfileImageService().loadProfileImage(user.profilePicUrl);
@@ -412,6 +416,8 @@ class _LoginState extends State<Login> {
       }
 
       await mymodel.User.saveToPrefs(appUser);
+      // Set user online after Google login
+      await _presenceService.setOnlineStatus(appUser.uid, true);
 
       Navigator.pushReplacement(
         context,

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:veil_chat_application/views/entry/login.dart';
+import 'package:veil_chat_application/services/presence_service.dart';
 
 class User {
   final String uid;
@@ -42,7 +43,7 @@ class User {
     this.locationUpdatedAt,
   });
 
-    factory User.fromJson(Map<String, dynamic> json) {
+  factory User.fromJson(Map<String, dynamic> json) {
     final uid = json['uid'] as String?;
     if (uid == null) {
       throw FormatException('Missing or null UID in user data');
@@ -68,7 +69,8 @@ class User {
     if (locationUpdatedAtData is Timestamp) {
       locationUpdatedAt = locationUpdatedAtData;
     } else if (locationUpdatedAtData is String) {
-      locationUpdatedAt = Timestamp.fromDate(DateTime.parse(locationUpdatedAtData));
+      locationUpdatedAt =
+          Timestamp.fromDate(DateTime.parse(locationUpdatedAtData));
     }
 
     return User(
@@ -170,11 +172,14 @@ class User {
   // Retrieve name, age, and gender from SharedPreferences
   static Future<Map<String, dynamic>> getProfileDetails() async {
     final prefs = await SharedPreferences.getInstance();
-    final dynamic savedAge = prefs.get('user_age'); // Use get() to retrieve any type
+    final dynamic savedAge =
+        prefs.get('user_age'); // Use get() to retrieve any type
     return {
       'fullName': prefs.getString('user_fullName'),
       'gender': prefs.getString('user_gender'),
-      'age': savedAge != null ? savedAge.toString() : null, // Convert to String if not null
+      'age': savedAge != null
+          ? savedAge.toString()
+          : null, // Convert to String if not null
     };
   }
 
@@ -195,7 +200,15 @@ class User {
   /// and navigating to the login page.
   static Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // Clears ALL data saved by your app in SharedPreferences
+
+    // Set user offline before logout
+    final userId = prefs.getString('uid');
+    if (userId != null) {
+      await PresenceService().goOffline(userId);
+    }
+
+    await prefs
+        .clear(); // Clears ALL data saved by your app in SharedPreferences
 
     // After clearing data, navigate to the login page.
     // pushAndRemoveUntil ensures the user cannot go back to previous authenticated screens.
@@ -203,7 +216,8 @@ class User {
       MaterialPageRoute(
           builder: (context) =>
               const Login()), // Replace LoginPage() with your actual login page widget
-      (Route<dynamic> route) => false, // This predicate removes all previous routes
+      (Route<dynamic> route) =>
+          false, // This predicate removes all previous routes
     );
   }
 }
