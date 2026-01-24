@@ -134,8 +134,12 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
             _likedInterests.addAll(user.chatPreferences!.interests ?? []);
             _dislikedInterests.addAll(user.chatPreferences!.dealBreakers ?? []);
             _ageRange = RangeValues(
-              (user.chatPreferences!.minAge ?? 18).toDouble().clamp(_minAgeLimit, _maxAgeLimit),
-              (user.chatPreferences!.maxAge ?? 40).toDouble().clamp(_minAgeLimit, _maxAgeLimit),
+              (user.chatPreferences!.minAge ?? 18)
+                  .toDouble()
+                  .clamp(_minAgeLimit, _maxAgeLimit),
+              (user.chatPreferences!.maxAge ?? 40)
+                  .toDouble()
+                  .clamp(_minAgeLimit, _maxAgeLimit),
             );
             _oppositeGenderOnly = user.chatPreferences!.matchWithGender != null;
             _verifiedUsersOnly = user.chatPreferences!.onlyVerified ?? false;
@@ -206,7 +210,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
             content: const Text('Preferences saved successfully!'),
             backgroundColor: Theme.of(context).primaryColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
         if (Navigator.canPop(context)) {
@@ -264,7 +269,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
         child: ListView(
           controller: widget.scrollController,
           physics: const ClampingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(20.w, widget.isBottomSheet ? 8.h : 16.h, 20.w, 32.h),
+          padding: EdgeInsets.fromLTRB(
+              20.w, widget.isBottomSheet ? 8.h : 16.h, 20.w, 32.h),
           children: [
             if (widget.isBottomSheet) _buildDragHandle(theme),
             _buildHeader(theme),
@@ -275,8 +281,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
             SizedBox(height: 28.h),
             _buildPreferenceToggles(theme),
             SizedBox(height: 32.h),
-            _buildSaveButton(theme),
-            SizedBox(height: 16.h),
           ],
         ),
       ),
@@ -324,24 +328,85 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
   }
 
   Widget _buildHeader(ThemeData theme) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Find Your Match',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            letterSpacing: -0.5,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Find Your Match',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Text(
+                'Tap to like (max $_maxLikes), double-tap to dislike (max $_maxDislikes)',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.hintColor,
+                ),
+              ),
+            ],
           ),
         ),
-        SizedBox(height: 6.h),
-        Text(
-          'Tap to like (max $_maxLikes), double-tap to dislike (max $_maxDislikes)',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.hintColor,
-          ),
-        ),
+        SizedBox(width: 12.w),
+        _buildSaveButtonCompact(theme),
       ],
+    );
+  }
+
+  Widget _buildSaveButtonCompact(ThemeData theme) {
+    return GestureDetector(
+      onTap: _isSaving ? null : _savePreferences,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: _isSaving
+                ? [theme.disabledColor, theme.disabledColor]
+                : [theme.primaryColor, theme.primaryColor.withOpacity(0.8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20.r),
+          boxShadow: _isSaving
+              ? null
+              : [
+                  BoxShadow(
+                    color: theme.primaryColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+        ),
+        child: _isSaving
+            ? SizedBox(
+                width: 20.w,
+                height: 20.h,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check, color: Colors.white, size: 18.sp),
+                  SizedBox(width: 6.w),
+                  Text(
+                    'Save',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -359,12 +424,14 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
                 decoration: BoxDecoration(
                   color: theme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: theme.primaryColor.withOpacity(0.3)),
+                  border:
+                      Border.all(color: theme.primaryColor.withOpacity(0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.favorite, color: theme.primaryColor, size: 20.sp),
+                    Icon(Icons.favorite,
+                        color: theme.primaryColor, size: 20.sp),
                     SizedBox(width: 8.w),
                     Text(
                       'Likes: ${_likedInterests.length}/$_maxLikes',
@@ -390,7 +457,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.heart_broken, color: Colors.red.shade400, size: 20.sp),
+                    Icon(Icons.heart_broken,
+                        color: Colors.red.shade400, size: 20.sp),
                     SizedBox(width: 8.w),
                     Text(
                       'Dislikes: ${_dislikedInterests.length}/$_maxDislikes',
@@ -547,7 +615,9 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
               if (chipState != ChipState.neutral) ...[
                 SizedBox(width: 6.w),
                 Icon(
-                  chipState == ChipState.liked ? Icons.favorite : Icons.heart_broken,
+                  chipState == ChipState.liked
+                      ? Icons.favorite
+                      : Icons.heart_broken,
                   size: 14.sp,
                   color: Colors.white,
                 ),
@@ -621,19 +691,20 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
 
   void _showLimitReachedDialog(String type) {
     if (!mounted) return;
-    
+
     // Use post frame callback to avoid navigator conflicts during gestures
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       final theme = Theme.of(context);
       final limit = type == 'likes' ? _maxLikes : _maxDislikes;
       final isLikes = type == 'likes';
-      
+
       showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
           title: Row(
             children: [
               Icon(
@@ -672,7 +743,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
           children: [
             Row(
               children: [
-                Icon(Icons.cake_outlined, color: theme.primaryColor, size: 20.sp),
+                Icon(Icons.cake_outlined,
+                    color: theme.primaryColor, size: 20.sp),
                 SizedBox(width: 8.w),
                 Text(
                   'Age Range',
@@ -906,7 +978,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         title: Row(
           children: [
             Icon(Icons.verified_user, color: theme.primaryColor),
@@ -926,48 +999,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSaveButton(ThemeData theme) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _isSaving ? null : _savePreferences,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.primaryColor,
-          foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          elevation: 4,
-          shadowColor: theme.primaryColor.withOpacity(0.4),
-        ),
-        child: _isSaving
-            ? SizedBox(
-                height: 20.h,
-                width: 20.w,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle_outline, size: 20.sp),
-                  SizedBox(width: 8.w),
-                  Text(
-                    'Save Preferences',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
       ),
     );
   }
