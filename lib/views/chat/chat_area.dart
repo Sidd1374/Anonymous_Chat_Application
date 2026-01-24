@@ -1123,15 +1123,29 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
         appBar: AppBar(
           title: InkWell(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProfilePage(
-                    isViewingOther: true,
-                    otherUserId: widget.otherUserId,
+              // Only allow friends to view each other's profiles
+              if (_chatRoom?.roomType == ChatRoomType.friend) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfilePage(
+                      isViewingOther: true,
+                      otherUserId: widget.otherUserId,
+                    ),
                   ),
-                ),
-              );
+                );
+              } else {
+                // Strangers cannot view profiles - show a message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Become friends to view their profile'),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                );
+              }
             },
             borderRadius: BorderRadius.circular(8),
             child: Padding(
@@ -1166,7 +1180,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
                                                   ChatRoomType.stranger
                                           ? (_otherHasLiked
                                               ? '❤️ Liked you!'
-                                              : 'Tap to view profile')
+                                              : '👤 Stranger')
                                           : '✓ Friend'))),
                           style: Theme.of(context)
                               .textTheme

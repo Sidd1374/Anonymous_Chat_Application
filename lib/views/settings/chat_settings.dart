@@ -266,21 +266,36 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: ListView(
-          controller: widget.scrollController,
-          physics: const ClampingScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-              20.w, widget.isBottomSheet ? 8.h : 16.h, 20.w, 32.h),
+        child: Column(
           children: [
-            if (widget.isBottomSheet) _buildDragHandle(theme),
-            _buildHeader(theme),
-            SizedBox(height: 24.h),
-            _buildInterestsSection(theme),
-            SizedBox(height: 28.h),
-            _buildAgeRangeSelector(theme),
-            SizedBox(height: 28.h),
-            _buildPreferenceToggles(theme),
-            SizedBox(height: 32.h),
+            // Fixed header section
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20.w, widget.isBottomSheet ? 8.h : 16.h, 20.w, 0),
+              child: Column(
+                children: [
+                  if (widget.isBottomSheet) _buildDragHandle(theme),
+                  _buildHeader(theme),
+                  SizedBox(height: 16.h),
+                ],
+              ),
+            ),
+            // Scrollable options section
+            Expanded(
+              child: ListView(
+                controller: widget.scrollController,
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 32.h),
+                children: [
+                  _buildAgeRangeSelector(theme),
+                  SizedBox(height: 28.h),
+                  _buildInterestsSection(theme),
+                  SizedBox(height: 28.h),
+                  _buildPreferenceToggles(theme),
+                  SizedBox(height: 32.h),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -343,12 +358,12 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
                 ),
               ),
               SizedBox(height: 6.h),
-              Text(
-                'Tap to like (max $_maxLikes), double-tap to dislike (max $_maxDislikes)',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.hintColor,
-                ),
-              ),
+              // Text(
+              //   'Tap to like (max $_maxLikes), double-tap to dislike (max $_maxDislikes)',
+              //   style: theme.textTheme.bodyMedium?.copyWith(
+              //     color: theme.hintColor,
+              //   ),
+              // ),
             ],
           ),
         ),
@@ -414,6 +429,46 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Section Title
+        Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withOpacity(0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.auto_awesome,
+                color: Colors.white,
+                size: 20.sp,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Text(
+              'Vibe Check',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
         // Counters row
         Row(
           children: [
@@ -743,13 +798,34 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
           children: [
             Row(
               children: [
-                Icon(Icons.cake_outlined,
-                    color: theme.primaryColor, size: 20.sp),
-                SizedBox(width: 8.w),
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.primary.withOpacity(0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(Icons.cake_outlined,
+                      color: Colors.white, size: 20.sp),
+                ),
+                SizedBox(width: 12.w),
                 Text(
                   'Age Range',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -839,12 +915,33 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
       children: [
         Row(
           children: [
-            Icon(Icons.tune, color: theme.primaryColor, size: 20.sp),
-            SizedBox(width: 8.w),
+            Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withOpacity(0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.tune, color: Colors.white, size: 20.sp),
+            ),
+            SizedBox(width: 12.w),
             Text(
               'Advanced Settings',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
