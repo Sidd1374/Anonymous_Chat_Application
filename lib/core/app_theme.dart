@@ -149,22 +149,74 @@ class AppTheme extends ChangeNotifier {
   );
 
   // === Theme Manager (used via Provider) ===
-  ThemeData _currentTheme = darkTheme;
-  String _currentLogoPath = 'assets/logo/icon-no-bg-white.png';
+  ThemeMode _themeMode = ThemeMode.system;
+  late ThemeData _currentTheme;
+  late String _currentLogoPath;
 
+  ThemeMode get themeMode => _themeMode;
   ThemeData get currentTheme => _currentTheme;
   String get currentLogoPath => _currentLogoPath;
 
-  // Toggle Theme (light <-> dark)
-  void toggleTheme() {
-    if (_currentTheme == lightTheme) {
+  /// Constructor - initializes theme based on system preference
+  AppTheme() {
+    _initializeTheme();
+    // Listen for system brightness changes
+    WidgetsBinding.instance.platformDispatcher.onPlatformBrightnessChanged =
+        _onSystemBrightnessChanged;
+  }
+
+  void _initializeTheme() {
+    final brightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    if (_themeMode == ThemeMode.system) {
+      _currentTheme = brightness == Brightness.dark ? darkTheme : lightTheme;
+    } else if (_themeMode == ThemeMode.dark) {
       _currentTheme = darkTheme;
-      _currentLogoPath = 'assets/logo/icon-no-bg-white.png';
     } else {
       _currentTheme = lightTheme;
-      _currentLogoPath = 'assets/logo/icon-black-no-bg.png';
     }
+    _updateLogoPath();
+  }
+
+  void _updateLogoPath() {
+    _currentLogoPath = _currentTheme == darkTheme
+        ? 'assets/logo/icon-no-bg-white.png'
+        : 'assets/logo/icon-black-no-bg.png';
+  }
+
+  void _onSystemBrightnessChanged() {
+    if (_themeMode == ThemeMode.system) {
+      final brightness =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      _currentTheme = brightness == Brightness.dark ? darkTheme : lightTheme;
+      _updateLogoPath();
+      notifyListeners();
+    }
+  }
+
+  /// Set theme mode (system, light, or dark)
+  void setThemeMode(ThemeMode mode) {
+    _themeMode = mode;
+    if (mode == ThemeMode.system) {
+      final brightness =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      _currentTheme = brightness == Brightness.dark ? darkTheme : lightTheme;
+    } else if (mode == ThemeMode.dark) {
+      _currentTheme = darkTheme;
+    } else {
+      _currentTheme = lightTheme;
+    }
+    _updateLogoPath();
     notifyListeners();
+  }
+
+  // Toggle Theme (light <-> dark) - legacy method
+  void toggleTheme() {
+    if (_currentTheme == lightTheme) {
+      setThemeMode(ThemeMode.dark);
+    } else {
+      setThemeMode(ThemeMode.light);
+    }
   }
 
   // Reusable Styles
