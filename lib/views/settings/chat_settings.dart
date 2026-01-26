@@ -3,17 +3,30 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/services/firestore_service.dart';
+import 'package:veil_chat_application/views/entry/profile_created.dart';
+import 'package:veil_chat_application/views/entry/about_you.dart';
 
 class ChatSettingsPage extends StatefulWidget {
   final int verificationLevel;
   final bool isBottomSheet;
   final ScrollController? scrollController;
+  final bool isOnboarding;
+  // User profile data for onboarding flow
+  final String? profileImage;
+  final String? userName;
+  final String? userGender;
+  final String? userAge;
 
   const ChatSettingsPage({
     super.key,
     this.verificationLevel = 0,
     this.isBottomSheet = false,
     this.scrollController,
+    this.isOnboarding = false,
+    this.profileImage,
+    this.userName,
+    this.userGender,
+    this.userAge,
   });
 
   @override
@@ -35,6 +48,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
   // Max limits
   static const int _maxLikes = 5;
   static const int _maxDislikes = 5;
+  static const int _minLikesOnboarding = 3;
+  static const int _minDislikesOnboarding = 3;
 
   // Age range
   RangeValues _ageRange = const RangeValues(18, 40);
@@ -89,6 +104,28 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
   @override
   void initState() {
     super.initState();
+
+    // Initialize age range immediately for onboarding (from widget params)
+    if (widget.isOnboarding &&
+        widget.userAge != null &&
+        widget.userAge!.isNotEmpty) {
+      final userAge = int.tryParse(widget.userAge!) ?? 25;
+      double minAge = (userAge - 2).toDouble();
+      double maxAge = (userAge + 3).toDouble();
+
+      if (minAge < _minAgeLimit) {
+        minAge = _minAgeLimit;
+        maxAge = (_minAgeLimit + 5).clamp(_minAgeLimit, _maxAgeLimit);
+      } else if (maxAge > _maxAgeLimit) {
+        maxAge = _maxAgeLimit;
+        minAge = (_maxAgeLimit - 5).clamp(_minAgeLimit, _maxAgeLimit);
+      }
+
+      _ageRange = RangeValues(minAge, maxAge);
+      debugPrint(
+          '[ChatSettings] initState: Set age range from widget.userAge=$userAge to $minAge-$maxAge');
+    }
+
     _initAnimations();
     _loadSavedPreferences();
   }
@@ -130,7 +167,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
       if (user != null && mounted) {
         setState(() {
           _user = user;
-          if (user.chatPreferences != null) {
+          if (user.chatPreferences != null && !widget.isOnboarding) {
+            // Load existing preferences only if not onboarding
             _likedInterests.addAll(user.chatPreferences!.interests ?? []);
             _dislikedInterests.addAll(user.chatPreferences!.dealBreakers ?? []);
             _ageRange = RangeValues(
@@ -144,6 +182,36 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
             _oppositeGenderOnly = user.chatPreferences!.matchWithGender != null;
             _verifiedUsersOnly = user.chatPreferences!.onlyVerified ?? false;
           }
+
+          // Set recommended age range based on user's age during onboarding
+          if (widget.isOnboarding) {
+            final userAgeStr = widget.userAge ?? user.age;
+            debugPrint('[ChatSettings] Onboarding: userAge = $userAgeStr');
+
+            int userAge = 25; // Default fallback
+            if (userAgeStr != null && userAgeStr.isNotEmpty) {
+              userAge = int.tryParse(userAgeStr) ?? 25;
+            }
+
+            // Calculate a 5-year range with user's age roughly in the middle
+            double minAge = (userAge - 2).toDouble();
+            double maxAge = (userAge + 3).toDouble();
+
+            // Handle edge cases at boundaries
+            if (minAge < _minAgeLimit) {
+              // User is near minimum age (e.g., 18-20)
+              minAge = _minAgeLimit;
+              maxAge = (_minAgeLimit + 5).clamp(_minAgeLimit, _maxAgeLimit);
+            } else if (maxAge > _maxAgeLimit) {
+              // User is near maximum age
+              maxAge = _maxAgeLimit;
+              minAge = (_maxAgeLimit - 5).clamp(_minAgeLimit, _maxAgeLimit);
+            }
+
+            _ageRange = RangeValues(minAge, maxAge);
+            debugPrint('[ChatSettings] Set age range: $minAge - $maxAge');
+          }
+
           _isLoading = false;
         });
       } else {
@@ -163,6 +231,44 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
       return;
     }
 
+    // Validate minimum interests/dislikes (required for all users)
+    if (_likedInterests.length < _minLikesOnboarding ||
+        _dislikedInterests.length < _minDislikesOnboarding) {
+      final mediaQuery = MediaQuery.of(context);
+      final topPadding = mediaQuery.padding.top; // Status bar / notch height
+      final bottomPadding =
+          mediaQuery.padding.bottom; // Navigation buttons height
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.white, size: 20.sp),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Text(
+                  'You need to select minimum 3 interests and 3 dislikes to continue',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            // Position at top: total height - top safe area - snackbar height estimate - some padding
+            bottom: mediaQuery.size.height - topPadding - bottomPadding - 120,
+            left: 16.w,
+            right: 16.w,
+          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -177,9 +283,30 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
       );
 
       // Update Firestore
-      final firestoreData = {
-        'chatPreferences': updatedChatPrefs.toJson(),
-      };
+      Map<String, dynamic> firestoreData;
+
+      if (widget.isOnboarding) {
+        // During onboarding, save all user data (profile + chat preferences)
+        // since About page only saved to local prefs
+        firestoreData = {
+          'fullName': _user!.fullName,
+          'gender': _user!.gender,
+          'age': _user!.age,
+          'profilePicUrl': _user!.profilePicUrl,
+          'interests': _user!.interests,
+          'location': _user!.location,
+          'latitude': _user!.latitude,
+          'longitude': _user!.longitude,
+          'locationUpdatedAt': _user!.locationUpdatedAt,
+          'chatPreferences': updatedChatPrefs.toJson(),
+        };
+      } else {
+        // Regular mode: only update chat preferences
+        firestoreData = {
+          'chatPreferences': updatedChatPrefs.toJson(),
+        };
+      }
+
       await FirestoreService().updateUser(_user!.uid, firestoreData);
 
       // Update local user and save to SharedPreferences
@@ -214,7 +341,21 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        if (Navigator.canPop(context)) {
+
+        // Navigate to ProfileCreated in onboarding mode, otherwise pop back
+        if (widget.isOnboarding) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProfileCreated(
+                profileImage: widget.profileImage,
+                name: widget.userName ?? _user!.fullName,
+                gender: widget.userGender ?? _user!.gender ?? '',
+                age: widget.userAge ?? _user!.age ?? '',
+              ),
+            ),
+          );
+        } else if (Navigator.canPop(context)) {
           Navigator.pop(context);
         }
       }
@@ -290,8 +431,11 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
                   _buildAgeRangeSelector(theme),
                   SizedBox(height: 28.h),
                   _buildInterestsSection(theme),
-                  SizedBox(height: 28.h),
-                  _buildPreferenceToggles(theme),
+                  // Hide advanced settings in onboarding mode
+                  if (!widget.isOnboarding) ...[
+                    SizedBox(height: 28.h),
+                    _buildPreferenceToggles(theme),
+                  ],
                   SizedBox(height: 32.h),
                 ],
               ),
@@ -318,10 +462,26 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Matching Preferences'),
+        title: Text(
+            widget.isOnboarding ? 'Chat Preferences' : 'Matching Preferences'),
         centerTitle: true,
         elevation: 0,
         backgroundColor: theme.scaffoldBackgroundColor,
+        leading: widget.isOnboarding
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  // In onboarding mode, go back to About page instead of default pop
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const EditInformation(editType: 'About'),
+                    ),
+                  );
+                },
+              )
+            : null, // Use default back button for non-onboarding
       ),
       body: content,
     );

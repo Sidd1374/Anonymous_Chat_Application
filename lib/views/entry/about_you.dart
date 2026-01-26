@@ -4,9 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/services/firestore_service.dart';
-import 'package:veil_chat_application/views/entry/profile_created.dart';
+import 'package:veil_chat_application/views/settings/chat_settings.dart';
 import 'package:veil_chat_application/services/cloudinary_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:veil_chat_application/services/location_service.dart';
@@ -173,279 +174,1606 @@ class _EditInformationState extends State<EditInformation> {
     }
   }
 
+  Future<void> _handleSubmit() async {
+    final isEditMode = widget.editType == 'Edit Profile';
+
+    // Validate required fields
+    final name = _nameController.text.trim();
+    final age = _ageController.text.trim();
+    final hasValidGender = _genderOptions.contains(_selectedGender);
+    final hasLocation = _location != null && _location!.isNotEmpty;
+    final hasImage = _profileImage != null || _profileImageUrl != null;
+
+    // For onboarding, all fields are required
+    if (!isEditMode) {
+      if (name.isEmpty ||
+          age.isEmpty ||
+          !hasValidGender ||
+          !hasLocation ||
+          !hasImage) {
+        setState(() {
+          _showValidationErrors = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill in all required fields'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (isEditMode) {
+        // UPDATE MODE: Update Firebase
+        final user = await mymodel.User.getFromPrefs();
+        if (user != null) {
+          // Upload new profile image if selected
+          String? newImageUrl = _profileImageUrl;
+          if (_profileImage != null) {
+            final uploadResult = await cloudinary.uploadFileUnsigned(
+              filePath: _profileImage!.path,
+            );
+            newImageUrl = uploadResult.secureUrl;
+          }
+
+          // Prepare update data
+          final Map<String, dynamic> updateData = {
+            'fullName': name,
+            'age': age,
+            'gender': _selectedGender,
+            if (newImageUrl != null) 'profilePicUrl': newImageUrl,
+            if (_location != null) 'location': _location,
+            if (_latitude != null) 'latitude': _latitude,
+            if (_longitude != null) 'longitude': _longitude,
+            'locationUpdatedAt': Timestamp.now(),
+          };
+
+          // Update Firebase
+          final firestoreService = FirestoreService();
+          await firestoreService.updateUser(user.uid, updateData);
+
+          // Update local preferences with new user data
+          final updatedUser = mymodel.User(
+            uid: user.uid,
+            email: user.email,
+            fullName: name,
+            createdAt: user.createdAt,
+            profilePicUrl: newImageUrl ?? user.profilePicUrl,
+            gender: _selectedGender,
+            age: age,
+            interests: user.interests,
+            verificationLevel: user.verificationLevel,
+            chatPreferences: user.chatPreferences,
+            privacySettings: user.privacySettings,
+            location: _location ?? user.location,
+            latitude: _latitude ?? user.latitude,
+            longitude: _longitude ?? user.longitude,
+            locationUpdatedAt: Timestamp.now(),
+          );
+          await mymodel.User.saveToPrefs(updatedUser);
+
+          // Clear image cache if profile picture was updated
+          if (_profileImage != null && newImageUrl != null) {
+            await DefaultCacheManager().removeFile(newImageUrl);
+          }
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile updated successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pop(context);
+          }
+        }
+      } else {
+        // ONBOARDING MODE: Save to local SharedPreferences only
+        await mymodel.User.saveProfileDetails(
+          fullName: name,
+          gender: _selectedGender,
+          age: age,
+        );
+
+        // Save profile image locally if selected
+        if (_profileImage != null) {
+          await mymodel.User.saveProfileImageLocally(_profileImage!);
+        }
+
+        // Save location to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        if (_location != null) {
+          await prefs.setString('user_location', _location!);
+        }
+        if (_latitude != null) {
+          await prefs.setDouble('user_latitude', _latitude!);
+        }
+        if (_longitude != null) {
+          await prefs.setDouble('user_longitude', _longitude!);
+        }
+
+        if (mounted) {
+          // Navigate to next step in onboarding (interests page)
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ChatSettingsPage(isOnboarding: true),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    String appBarTitle =
-        widget.editType == 'Edit Profile' ? "Edit Profile" : "About Me";
+    final isDark = theme.brightness == Brightness.dark;
+    final isEditMode = widget.editType == 'Edit Profile';
+    final screenHeight = MediaQuery.of(context).size.height;
 
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: Text(appBarTitle)),
-        body: const Center(child: CircularProgressIndicator()),
+        body:
+            Center(child: CircularProgressIndicator(color: theme.primaryColor)),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Text(appBarTitle, style: theme.appBarTheme.titleTextStyle),
-      ),
       body: SingleChildScrollView(
-        child: Container(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(height: 20.h),
-              GestureDetector(
-                onTap: _pickImage,
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    Container(
-                      width: 150.w,
-                      height: 150.h,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: theme.cardColor,
-                        border: Border.all(
-                          color: (_showValidationErrors &&
-                                  _profileImage == null &&
-                                  _profileImageUrl == null)
-                              ? Colors.red
-                              : theme.primaryColor,
-                          width: 3.w,
-                        ),
-                        image: _profileImage != null
-                            ? DecorationImage(
-                                image: FileImage(_profileImage!),
-                                fit: BoxFit.cover)
-                            : _profileImageUrl != null
-                                ? DecorationImage(
-                                    image: CachedNetworkImageProvider(
-                                        _profileImageUrl!),
-                                    fit: BoxFit.cover)
-                                : null,
-                      ),
-                      child: _profileImage == null && _profileImageUrl == null
-                          ? Icon(Icons.person,
-                              size: 80.sp,
-                              color: (_showValidationErrors)
-                                  ? Colors.red.shade300
-                                  : theme.hintColor)
-                          : null,
-                    ),
-                    CircleAvatar(
-                      radius: 20.r,
-                      backgroundColor: (_showValidationErrors &&
-                              _profileImage == null &&
-                              _profileImageUrl == null)
-                          ? Colors.red
-                          : theme.primaryColor,
-                      child: Icon(Icons.add, color: Colors.white, size: 20.sp),
-                    ),
-                  ],
+        child: Stack(
+          children: [
+            // Gradient Background Header
+            Container(
+              height: screenHeight * 0.32,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDark
+                      ? [
+                          theme.primaryColor.withOpacity(0.3),
+                          theme.scaffoldBackgroundColor
+                        ]
+                      : [
+                          theme.primaryColor.withOpacity(0.15),
+                          theme.scaffoldBackgroundColor
+                        ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
-              SizedBox(height: 8.h),
-              Text(
-                "Upload Your Profile Picture",
-                style: TextStyle(
-                  color: (_showValidationErrors &&
-                          _profileImage == null &&
-                          _profileImageUrl == null)
-                      ? Colors.red
-                      : null,
-                ),
-              ),
-              if (_showValidationErrors &&
-                  _profileImage == null &&
-                  _profileImageUrl == null)
-                Padding(
-                  padding: EdgeInsets.only(top: 4.h),
-                  child: Text(
-                    '* Profile picture is required',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 12.sp,
+            ),
+
+            // Main Content
+            SafeArea(
+              child: Column(
+                children: [
+                  // Back Button Row
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                    child: Row(
+                      children: [
+                        if (Navigator.canPop(context))
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: Container(
+                              padding: EdgeInsets.all(8.w),
+                              decoration: BoxDecoration(
+                                color: theme.cardColor.withOpacity(0.8),
+                                shape: BoxShape.circle,
+                              ),
+                              child:
+                                  Icon(Icons.arrow_back_ios_new, size: 18.sp),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                  // Title Section (on top)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w),
+                    child: Column(
+                      children: [
+                        Text(
+                          isEditMode
+                              ? 'Edit Your Profile'
+                              : 'Create Your Profile',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          isEditMode
+                              ? 'Update your information'
+                              : 'Let\'s get to know you',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.hintColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+
+                  // Avatar Section (below title)
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.primaryColor.withOpacity(0.2),
+                            blurRadius: 25,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Container(
+                        padding: EdgeInsets.all(4.w),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.primaryColor,
+                              theme.primaryColor.withOpacity(0.5),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Container(
+                          width: 100.w,
+                          height: 100.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.cardColor,
+                            image: _getProfileImage(),
+                          ),
+                          child: (_profileImage == null &&
+                                  _profileImageUrl == null)
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.camera_alt_rounded,
+                                        size: 28.sp,
+                                        color: theme.primaryColor
+                                            .withOpacity(0.6)),
+                                    SizedBox(height: 4.h),
+                                    Text('ADD PHOTO',
+                                        style: TextStyle(
+                                          fontSize: 9.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: theme.primaryColor
+                                              .withOpacity(0.6),
+                                          letterSpacing: 0.5,
+                                        )),
+                                  ],
+                                )
+                              : Stack(
+                                  children: [
+                                    Positioned(
+                                      bottom: 2,
+                                      right: 2,
+                                      child: Container(
+                                        padding: EdgeInsets.all(6.w),
+                                        decoration: BoxDecoration(
+                                          color: theme.primaryColor,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: theme.cardColor, width: 2),
+                                        ),
+                                        child: Icon(Icons.edit,
+                                            size: 12.sp, color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+
+                  // Form Card
+                  Container(
+                    margin: EdgeInsets.symmetric(horizontal: 20.w),
+                    padding: EdgeInsets.fromLTRB(24.w, 28.h, 24.w, 20.h),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(28.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Name Input
+                        _buildElegantInput(
+                          theme: theme,
+                          label: 'YOUR NAME',
+                          hint: 'Enter your full name',
+                          controller: _nameController,
+                          icon: Icons.person_outline_rounded,
+                        ),
+                        SizedBox(height: 20.h),
+
+                        // Gender & Age Row
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: _buildElegantDropdown(theme),
+                            ),
+                            SizedBox(width: 20.w),
+                            Expanded(
+                              child: _buildElegantInput(
+                                theme: theme,
+                                label: 'AGE',
+                                hint: '18+',
+                                controller: _ageController,
+                                icon: Icons.cake_outlined,
+                                isNumber: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 20.h),
+
+                        // Location
+                        _buildElegantLocation(theme, isEditMode),
+
+                        SizedBox(height: 24.h),
+
+                        // Submit Button
+                        _buildFloatingButton(theme, isEditMode),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  DecorationImage? _getProfileImage() {
+    if (_profileImage != null) {
+      return DecorationImage(
+          image: FileImage(_profileImage!), fit: BoxFit.cover);
+    } else if (_profileImageUrl != null) {
+      return DecorationImage(
+          image: CachedNetworkImageProvider(_profileImageUrl!),
+          fit: BoxFit.cover);
+    }
+    return null;
+  }
+
+  Widget _buildElegantInput({
+    required ThemeData theme,
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    required IconData icon,
+    bool isNumber = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w600,
+            color: theme.primaryColor,
+            letterSpacing: 1.2,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Row(
+          children: [
+            Icon(icon, size: 20.sp, color: theme.hintColor),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                keyboardType:
+                    isNumber ? TextInputType.number : TextInputType.text,
+                style: theme.textTheme.bodyLarge
+                    ?.copyWith(fontWeight: FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: TextStyle(color: theme.hintColor.withOpacity(0.6)),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.only(bottom: 8.h),
                 ),
-              SizedBox(height: 20.h),
-              _buildInputField(context, 'Full Name',
-                  controller: _nameController),
-              SizedBox(height: 8.h),
-              _buildDropdownField(context, 'Gender'),
-              SizedBox(height: 8.h),
-              _buildInputField(context, 'Current Age',
-                  numeric: true, controller: _ageController),
-              SizedBox(height: 16.h),
-              _buildLocationField(theme),
-              SizedBox(height: 40.h),
-              _buildButton(
-                  context,
-                  widget.editType == 'Edit Profile'
-                      ? 'Save Changes'
-                      : 'Continue'),
+              ),
+            ),
+          ],
+        ),
+        Container(
+          height: 1.5,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.primaryColor.withOpacity(0.5),
+                theme.primaryColor.withOpacity(0.1)
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildElegantDropdown(ThemeData theme) {
+    final hasValue = _genderOptions.contains(_selectedGender);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'GENDER',
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w600,
+            color: theme.primaryColor,
+            letterSpacing: 1.2,
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(
+              color: hasValue
+                  ? theme.primaryColor.withOpacity(0.3)
+                  : theme.dividerColor.withOpacity(0.2),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: hasValue ? _selectedGender : null,
+              hint: Row(
+                children: [
+                  Icon(Icons.person_outline,
+                      size: 18.sp, color: theme.hintColor),
+                  SizedBox(width: 8.w),
+                  Text('Select', style: TextStyle(color: theme.hintColor)),
+                ],
+              ),
+              isExpanded: true,
+              isDense: true,
+              icon: Container(
+                padding: EdgeInsets.all(4.w),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6.r),
+                ),
+                child: Icon(Icons.keyboard_arrow_down_rounded,
+                    color: theme.primaryColor, size: 18.sp),
+              ),
+              dropdownColor: theme.cardColor,
+              borderRadius: BorderRadius.circular(12.r),
+              style: theme.textTheme.bodyLarge
+                  ?.copyWith(fontWeight: FontWeight.w500),
+              selectedItemBuilder: (context) {
+                return _genderOptions.map((g) {
+                  return Row(
+                    children: [
+                      Icon(
+                        g == 'Male'
+                            ? Icons.male_rounded
+                            : (g == 'Female'
+                                ? Icons.female_rounded
+                                : Icons.transgender_rounded),
+                        size: 18.sp,
+                        color: theme.primaryColor,
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(g,
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.w500)),
+                    ],
+                  );
+                }).toList();
+              },
+              items: _genderOptions.map((g) {
+                final isSelected = g == _selectedGender;
+                return DropdownMenuItem(
+                  value: g,
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(6.w),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? theme.primaryColor.withOpacity(0.15)
+                                : theme.scaffoldBackgroundColor,
+                            borderRadius: BorderRadius.circular(8.r),
+                          ),
+                          child: Icon(
+                            g == 'Male'
+                                ? Icons.male_rounded
+                                : (g == 'Female'
+                                    ? Icons.female_rounded
+                                    : Icons.transgender_rounded),
+                            size: 18.sp,
+                            color: isSelected
+                                ? theme.primaryColor
+                                : theme.hintColor,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Text(
+                          g,
+                          style: TextStyle(
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected ? theme.primaryColor : null,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (isSelected)
+                          Icon(Icons.check_circle,
+                              size: 18.sp, color: theme.primaryColor),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (v) => setState(() => _selectedGender = v!),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildElegantLocation(ThemeData theme, bool isEditMode) {
+    final hasLocation = _location != null && _location!.isNotEmpty;
+    final hasError = _showValidationErrors && !isEditMode && !hasLocation;
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: hasLocation
+            ? Colors.green.withOpacity(0.08)
+            : (hasError
+                ? Colors.red.withOpacity(0.08)
+                : theme.scaffoldBackgroundColor),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(
+          color: hasLocation
+              ? Colors.green.withOpacity(0.3)
+              : (hasError ? Colors.red.withOpacity(0.3) : Colors.transparent),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: BoxDecoration(
+              color: hasLocation
+                  ? Colors.green.withOpacity(0.15)
+                  : theme.primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              hasLocation ? Icons.check_rounded : Icons.location_on_rounded,
+              size: 22.sp,
+              color: hasLocation
+                  ? Colors.green
+                  : (hasError ? Colors.red : theme.primaryColor),
+            ),
+          ),
+          SizedBox(width: 14.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasLocation ? 'Location Detected' : 'Your Location',
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                    color: hasLocation
+                        ? Colors.green
+                        : (hasError ? Colors.red : theme.primaryColor),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  hasLocation ? _location! : 'Required to match nearby',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: hasLocation
+                        ? theme.textTheme.bodyLarge?.color
+                        : theme.hintColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: _isDetectingLocation ? null : _detectLocation,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: theme.primaryColor,
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: _isDetectingLocation
+                  ? SizedBox(
+                      width: 16.sp,
+                      height: 16.sp,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : Text(
+                      hasLocation ? 'Refresh' : 'Detect',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12.sp),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingButton(ThemeData theme, bool isEditMode) {
+    return GestureDetector(
+      onTap: _handleSubmit,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(vertical: 16.h),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.75)],
+          ),
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: theme.primaryColor.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isEditMode ? 'Save Changes' : 'Continue',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            SizedBox(width: 10.w),
+            Container(
+              padding: EdgeInsets.all(4.w),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isEditMode ? Icons.check : Icons.arrow_forward,
+                color: Colors.white,
+                size: 18.sp,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Hero Avatar with gradient ring
+  Widget _buildHeroAvatar(ThemeData theme) {
+    final hasImage = _profileImage != null || _profileImageUrl != null;
+    final hasError = _showValidationErrors && !hasImage;
+
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: hasError
+                    ? [Colors.red.shade400, Colors.red.shade600]
+                    : [theme.primaryColor, theme.primaryColor.withOpacity(0.6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Container(
+              width: 100.w,
+              height: 100.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.cardColor,
+                image: _profileImage != null
+                    ? DecorationImage(
+                        image: FileImage(_profileImage!), fit: BoxFit.cover)
+                    : _profileImageUrl != null
+                        ? DecorationImage(
+                            image:
+                                CachedNetworkImageProvider(_profileImageUrl!),
+                            fit: BoxFit.cover)
+                        : null,
+              ),
+              child: !hasImage
+                  ? Icon(Icons.person_rounded,
+                      size: 48.sp, color: theme.hintColor.withOpacity(0.5))
+                  : null,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color:
+                  (hasError ? Colors.red : theme.primaryColor).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  hasImage ? Icons.edit_rounded : Icons.add_a_photo_rounded,
+                  size: 16.sp,
+                  color: hasError ? Colors.red : theme.primaryColor,
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  hasImage ? 'Change Photo' : 'Add Photo',
+                  style: TextStyle(
+                    color: hasError ? Colors.red : theme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Premium Form Field
+  Widget _buildPremiumField(
+      ThemeData theme, String label, IconData icon, Widget child) {
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16.sp, color: theme.primaryColor),
+              SizedBox(width: 6.w),
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.primaryColor,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
             ],
+          ),
+          SizedBox(height: 8.h),
+          child,
+        ],
+      ),
+    );
+  }
+
+  // Premium Location Field
+  Widget _buildPremiumLocationField(ThemeData theme) {
+    final isEditMode = widget.editType == 'Edit Profile';
+    final hasLocation = _location != null && _location!.isNotEmpty;
+    final hasError = _locationError != null ||
+        (_showValidationErrors && !isEditMode && !hasLocation);
+
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+            color: hasError
+                ? Colors.red.withOpacity(0.4)
+                : theme.dividerColor.withOpacity(0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: BoxDecoration(
+              color: (hasLocation
+                      ? Colors.green
+                      : (hasError ? Colors.red : theme.primaryColor))
+                  .withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10.r),
+            ),
+            child: Icon(
+              hasLocation
+                  ? Icons.check_circle_rounded
+                  : Icons.location_on_rounded,
+              size: 22.sp,
+              color: hasLocation
+                  ? Colors.green
+                  : (hasError ? Colors.red : theme.primaryColor),
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Location',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: hasError ? Colors.red : theme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  hasLocation
+                      ? _location!
+                      : (_locationError ?? 'Tap to detect your location'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: hasError
+                        ? Colors.red
+                        : (hasLocation ? null : theme.hintColor),
+                    fontWeight:
+                        hasLocation ? FontWeight.w500 : FontWeight.normal,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _isDetectingLocation ? null : _detectLocation,
+            style: TextButton.styleFrom(
+              backgroundColor: theme.primaryColor.withOpacity(0.1),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r)),
+            ),
+            child: _isDetectingLocation
+                ? SizedBox(
+                    width: 16.sp,
+                    height: 16.sp,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                          hasLocation
+                              ? Icons.refresh_rounded
+                              : Icons.my_location_rounded,
+                          size: 16.sp),
+                      SizedBox(width: 4.w),
+                      Text(hasLocation ? 'Refresh' : 'Detect'),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Gradient Button
+  Widget _buildGradientButton(ThemeData theme) {
+    final isEditMode = widget.editType == 'Edit Profile';
+    return Container(
+      width: double.infinity,
+      height: 54.h,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(14.r),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primaryColor.withOpacity(0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // Trigger validation and save
+            _buildButton(context, '');
+          },
+          borderRadius: BorderRadius.circular(14.r),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isEditMode ? 'Save Changes' : 'Continue',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(width: 8.w),
+                Icon(
+                  isEditMode
+                      ? Icons.check_rounded
+                      : Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 20.sp,
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildLocationField(ThemeData theme) {
+  // Compact profile row with photo on left and text on right
+  Widget _buildCompactProfileRow(ThemeData theme) {
+    final hasImage = _profileImage != null || _profileImageUrl != null;
+    final hasError = _showValidationErrors && !hasImage;
+
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 70.w,
+              height: 70.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: hasError ? Colors.red : theme.primaryColor,
+                  width: 2,
+                ),
+                image: _profileImage != null
+                    ? DecorationImage(
+                        image: FileImage(_profileImage!), fit: BoxFit.cover)
+                    : _profileImageUrl != null
+                        ? DecorationImage(
+                            image:
+                                CachedNetworkImageProvider(_profileImageUrl!),
+                            fit: BoxFit.cover)
+                        : null,
+                color: theme.scaffoldBackgroundColor,
+              ),
+              child: !hasImage
+                  ? Icon(Icons.person, size: 32.sp, color: theme.hintColor)
+                  : null,
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasImage ? 'Profile Photo' : 'Add Profile Photo',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: hasError ? Colors.red : null,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    hasImage ? 'Tap to change' : 'Required',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: hasError ? Colors.red.shade300 : theme.hintColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              hasImage ? Icons.edit : Icons.camera_alt,
+              color: hasError ? Colors.red : theme.primaryColor,
+              size: 22.sp,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Compact inline field with icon and label
+  Widget _buildInlineField(
+      ThemeData theme, IconData icon, String label, Widget child) {
+    return Row(
+      children: [
+        Icon(icon, size: 18.sp, color: theme.primaryColor),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.hintColor,
+                  fontSize: 11.sp,
+                ),
+              ),
+              child,
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Compact location field
+  Widget _buildCompactLocation(ThemeData theme) {
+    final isEditMode = widget.editType == 'Edit Profile';
+    final hasError = _locationError != null ||
+        (_showValidationErrors &&
+            !isEditMode &&
+            (_location == null || _location!.isEmpty));
+    final hasLocation = _location != null && _location!.isNotEmpty;
+
+    return Row(
+      children: [
+        Icon(
+          hasLocation ? Icons.check_circle : Icons.location_on,
+          size: 18.sp,
+          color: hasLocation
+              ? Colors.green
+              : (hasError ? Colors.red : theme.primaryColor),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Location${!isEditMode ? ' *' : ''}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: hasError ? Colors.red : theme.hintColor,
+                  fontSize: 11.sp,
+                ),
+              ),
+              Text(
+                hasLocation ? _location! : 'Tap detect to get location',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: hasLocation ? null : theme.hintColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: _isDetectingLocation ? null : _detectLocation,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: _isDetectingLocation
+              ? SizedBox(
+                  width: 16.sp,
+                  height: 16.sp,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(hasLocation ? 'Refresh' : 'Detect',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(
+    ThemeData theme, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8.w),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.primary.withOpacity(0.7),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 20.sp),
+        ),
+        SizedBox(width: 12.w),
+        Text(
+          title,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: -0.5,
+          ),
+        ),
+        if (subtitle != null) ...[
+          SizedBox(width: 8.w),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.primaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildProfilePictureSection(ThemeData theme) {
+    final hasImage = _profileImage != null || _profileImageUrl != null;
+    final hasError = _showValidationErrors && !hasImage;
+
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            width: 140.w,
+            height: 140.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: hasImage
+                  ? null
+                  : LinearGradient(
+                      colors: [
+                        theme.cardColor,
+                        theme.cardColor.withOpacity(0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+              boxShadow: [
+                BoxShadow(
+                  color: hasError
+                      ? Colors.red.withOpacity(0.3)
+                      : theme.primaryColor.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Profile Image Container
+                Container(
+                  width: 140.w,
+                  height: 140.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: hasError ? Colors.red : theme.primaryColor,
+                      width: 3.w,
+                    ),
+                    image: _profileImage != null
+                        ? DecorationImage(
+                            image: FileImage(_profileImage!),
+                            fit: BoxFit.cover,
+                          )
+                        : _profileImageUrl != null
+                            ? DecorationImage(
+                                image: CachedNetworkImageProvider(
+                                    _profileImageUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                  ),
+                  child: !hasImage
+                      ? Icon(
+                          Icons.person_outline,
+                          size: 60.sp,
+                          color:
+                              hasError ? Colors.red.shade300 : theme.hintColor,
+                        )
+                      : null,
+                ),
+                // Camera/Add Button
+                Positioned(
+                  bottom: 4,
+                  right: 4,
+                  child: Container(
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: hasError ? Colors.red : theme.primaryColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (hasError ? Colors.red : theme.primaryColor)
+                              .withOpacity(0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      hasImage ? Icons.edit : Icons.camera_alt,
+                      color: Colors.white,
+                      size: 18.sp,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 12.h),
+        Text(
+          hasImage ? "Tap to change photo" : "Add a profile photo",
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: hasError ? Colors.red : theme.hintColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: EdgeInsets.only(top: 8.h),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Text(
+                '⚠ Profile picture is required',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPersonalDetailsCard(ThemeData theme) {
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildModernInputField(
+            theme,
+            label: 'Full Name',
+            hint: 'Enter your name',
+            icon: Icons.badge_outlined,
+            controller: _nameController,
+          ),
+          SizedBox(height: 16.h),
+          _buildModernDropdownField(theme),
+          SizedBox(height: 16.h),
+          _buildModernInputField(
+            theme,
+            label: 'Age',
+            hint: 'Enter your age',
+            icon: Icons.cake_outlined,
+            controller: _ageController,
+            numeric: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernInputField(
+    ThemeData theme, {
+    required String label,
+    required String hint,
+    required IconData icon,
+    required TextEditingController controller,
+    bool numeric = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(
-              Icons.location_on_outlined,
-              size: 20.sp,
-              color: theme.primaryColor,
-            ),
+            Icon(icon, size: 18.sp, color: theme.primaryColor),
             SizedBox(width: 8.w),
             Text(
-              'Location',
-              style: theme.textTheme.titleMedium?.copyWith(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
+                color: theme.textTheme.bodyLarge?.color,
               ),
             ),
           ],
         ),
         SizedBox(height: 8.h),
         Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
           decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(8.r),
-            border: _locationError != null
-                ? Border.all(color: Colors.red.shade300, width: 1)
-                : null,
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
           ),
-          child: Row(
+          child: TextField(
+            controller: controller,
+            keyboardType: numeric ? TextInputType.number : TextInputType.text,
+            style: theme.textTheme.bodyLarge,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle:
+                  theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernDropdownField(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.wc_outlined, size: 18.sp, color: theme.primaryColor),
+            SizedBox(width: 8.w),
+            Text(
+              'Gender',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.textTheme.bodyLarge?.color,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8.h),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: theme.dividerColor.withOpacity(0.3)),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _genderOptions.contains(_selectedGender)
+                ? _selectedGender
+                : null,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+              hintText: 'Select gender',
+              hintStyle:
+                  theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+            ),
+            dropdownColor: theme.cardColor,
+            borderRadius: BorderRadius.circular(12.r),
+            items: _genderOptions
+                .map((gender) => DropdownMenuItem(
+                    value: gender,
+                    child: Text(gender, style: theme.textTheme.bodyLarge)))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedGender = value;
+                });
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationCard(ThemeData theme) {
+    final hasLocationError = (_locationError != null ||
+        (_showValidationErrors &&
+            widget.editType != 'Edit Profile' &&
+            (_location == null || _location!.isEmpty)));
+
+    return Container(
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20.r),
+        border: hasLocationError
+            ? Border.all(color: Colors.red.withOpacity(0.5), width: 1)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: hasLocationError
+                ? Colors.red.withOpacity(0.1)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_location != null && _location!.isNotEmpty)
-                      Text(
-                        _location!,
-                        style: theme.textTheme.bodyLarge,
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Colors.green, size: 18.sp),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              _location!,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       )
                     else
                       Text(
                         'Tap to detect your location',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.hintColor,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color:
+                              hasLocationError ? Colors.red : theme.hintColor,
                         ),
                       ),
-                    if (_locationError != null) ...[
-                      SizedBox(height: 4.h),
-                      Text(
-                        _locationError!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.red.shade400,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
-              SizedBox(width: 8.w),
-              _isDetectingLocation
-                  ? SizedBox(
-                      width: 24.w,
-                      height: 24.h,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: theme.primaryColor,
-                      ),
-                    )
-                  : IconButton(
-                      onPressed: _detectLocation,
-                      icon: Icon(
-                        _location != null ? Icons.refresh : Icons.my_location,
-                        color: theme.primaryColor,
-                      ),
-                      tooltip: _location != null
-                          ? 'Refresh location'
-                          : 'Detect location',
-                    ),
+              SizedBox(width: 12.w),
+              ElevatedButton.icon(
+                onPressed: _isDetectingLocation ? null : _detectLocation,
+                icon: _isDetectingLocation
+                    ? SizedBox(
+                        width: 16.sp,
+                        height: 16.sp,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(Icons.my_location, size: 18.sp),
+                label: Text(_isDetectingLocation ? 'Detecting...' : 'Detect'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  elevation: 0,
+                ),
+              ),
             ],
           ),
-        ),
-        SizedBox(height: 8.h),
-        Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 14.sp,
-              color: theme.hintColor,
-            ),
-            SizedBox(width: 6.w),
-            Expanded(
-              child: Text(
-                'Location is auto-detected to ensure authentic matching',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.hintColor,
-                  fontStyle: FontStyle.italic,
-                ),
+          if (_locationError != null) ...[
+            SizedBox(height: 12.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 16.sp),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      _locationError!,
+                      style: TextStyle(color: Colors.red, fontSize: 12.sp),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInputField(BuildContext context, String placeholder,
-      {bool numeric = false, TextEditingController? controller}) {
-    final theme = Theme.of(context);
-    return TextField(
-      controller: controller,
-      keyboardType: numeric ? TextInputType.number : TextInputType.text,
-      decoration: InputDecoration(
-        hintText: placeholder,
-        filled: true,
-        fillColor: theme.cardColor,
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
+        ],
       ),
-      style: theme.textTheme.bodyLarge
-          ?.copyWith(color: theme.textTheme.bodyLarge?.color),
-    );
-  }
-
-  Widget _buildDropdownField(BuildContext context, String placeholder) {
-    final theme = Theme.of(context);
-    return DropdownButtonFormField<String>(
-      value: _genderOptions.contains(_selectedGender) ? _selectedGender : null,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: theme.cardColor,
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        hintText: placeholder,
-        hintStyle: theme.textTheme.bodyLarge?.copyWith(color: theme.hintColor),
-      ),
-      items: _genderOptions
-          .map((gender) => DropdownMenuItem(
-              value: gender,
-              child: Text(gender, style: theme.textTheme.bodyLarge)))
-          .toList(),
-      onChanged: (value) {
-        if (value != null) {
-          setState(() {
-            _selectedGender = value;
-          });
-        }
-      },
     );
   }
 
@@ -472,6 +1800,17 @@ class _EditInformationState extends State<EditInformation> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Please fill all fields.')));
+          return;
+        }
+
+        // Check for location in About mode (mandatory during registration)
+        if (widget.editType != 'Edit Profile' &&
+            (_location == null || _location!.isEmpty)) {
+          setState(() {
+            _showValidationErrors = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Please detect your location to continue.')));
           return;
         }
 
@@ -540,19 +1879,24 @@ class _EditInformationState extends State<EditInformation> {
             );
           }
 
-          final updatedDataForFirebase = {
-            'fullName': newFullName,
-            'gender': newGender,
-            'age': newAge,
-            'profilePicUrl': profilePicUrl,
-            'interests': trimmedInterests,
-            'location': _location,
-            'latitude': _latitude,
-            'longitude': _longitude,
-            'locationUpdatedAt': _location != null ? Timestamp.now() : null,
-          };
-
-          await FirestoreService().updateUser(user.uid, updatedDataForFirebase);
+          // Only update Firebase for Edit Profile mode
+          // During registration (About mode), we save to local prefs only
+          // Firebase update will happen after Chat Settings page during onboarding
+          if (widget.editType == 'Edit Profile') {
+            final updatedDataForFirebase = {
+              'fullName': newFullName,
+              'gender': newGender,
+              'age': newAge,
+              'profilePicUrl': profilePicUrl,
+              'interests': trimmedInterests,
+              'location': _location,
+              'latitude': _latitude,
+              'longitude': _longitude,
+              'locationUpdatedAt': _location != null ? Timestamp.now() : null,
+            };
+            await FirestoreService()
+                .updateUser(user.uid, updatedDataForFirebase);
+          }
 
           final updatedUserForPrefs = mymodel.User(
             uid: user.uid,
@@ -579,14 +1923,16 @@ class _EditInformationState extends State<EditInformation> {
           if (widget.editType == 'Edit Profile') {
             Navigator.pop(context);
           } else {
+            // Navigate to ChatSettingsPage for onboarding instead of ProfileCreated
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => ProfileCreated(
+                builder: (context) => ChatSettingsPage(
+                  isOnboarding: true,
                   profileImage: updatedUserForPrefs.profilePicUrl,
-                  name: updatedUserForPrefs.fullName,
-                  gender: updatedUserForPrefs.gender ?? '',
-                  age: updatedUserForPrefs.age ?? '',
+                  userName: updatedUserForPrefs.fullName,
+                  userGender: updatedUserForPrefs.gender ?? '',
+                  userAge: updatedUserForPrefs.age ?? '',
                 ),
               ),
             );
