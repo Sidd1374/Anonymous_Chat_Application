@@ -12,6 +12,7 @@ import 'package:veil_chat_application/services/cloudinary_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:veil_chat_application/services/location_service.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:veil_chat_application/views/entry/profile_created.dart';
 
 class EditInformation extends StatefulWidget {
   final String editType; // Can be 'About' or 'Edit Profile'
@@ -59,16 +60,46 @@ class _EditInformationState extends State<EditInformation> {
     final user = await mymodel.User.getFromPrefs();
     if (user != null) {
       setState(() {
-        _nameController.text = user.fullName;
-        _ageController.text = user.age ?? '';
-        _selectedGender = user.gender ?? 'Select a gender';
+        _nameController.text =
+            user.fullName.isNotEmpty ? user.fullName : (_nameController.text);
+        _ageController.text = (user.age != null && user.age!.isNotEmpty)
+            ? user.age!
+            : _ageController.text;
+        _selectedGender =
+            (user.gender != null && user.gender != 'Select a gender')
+                ? user.gender!
+                : _selectedGender;
         _currentInterests = user.interests ?? [];
         _profileImageUrl = user.profilePicUrl;
-        _location = user.location;
-        _latitude = user.latitude;
-        _longitude = user.longitude;
+        _location = user.location ?? _location;
+        _latitude = user.latitude ?? _latitude;
+        _longitude = user.longitude ?? _longitude;
       });
     }
+
+    // Always check lightweight profile details as fallback or for onboarding consistency
+    final profile = await mymodel.User.getProfileDetails();
+    final prefs = await SharedPreferences.getInstance();
+    final savedImagePath = prefs.getString('profile_image_path');
+
+    setState(() {
+      if (_nameController.text.isEmpty)
+        _nameController.text = profile['fullName'] ?? '';
+      if (_ageController.text.isEmpty)
+        _ageController.text = profile['age'] ?? '';
+      if (_selectedGender == 'Select a gender')
+        _selectedGender = profile['gender'] ?? 'Select a gender';
+      if (_location == null) _location = profile['location'];
+      if (_latitude == null) _latitude = profile['latitude'];
+      if (_longitude == null) _longitude = profile['longitude'];
+
+      // Fallback for profile image path
+      if (_profileImage == null && _profileImageUrl == null) {
+        if (savedImagePath != null && File(savedImagePath).existsSync()) {
+          _profileImage = File(savedImagePath);
+        }
+      }
+    });
     setState(() {
       _isLoading = false;
     });
@@ -186,17 +217,50 @@ class _EditInformationState extends State<EditInformation> {
 
     // For onboarding, all fields are required
     if (!isEditMode) {
-      if (name.isEmpty ||
-          age.isEmpty ||
-          !hasValidGender ||
-          !hasLocation ||
-          !hasImage) {
+      bool missingFields = false;
+      String errorMessage = '';
+
+      if (name.isEmpty) {
+        missingFields = true;
+        errorMessage = 'Please enter your name';
+      } else if (age.isEmpty) {
+        missingFields = true;
+        errorMessage = 'Please enter your age';
+      } else if (!hasValidGender) {
+        missingFields = true;
+        errorMessage = 'Please select your gender';
+      } else if (!hasImage) {
+        missingFields = true;
+        errorMessage = 'Please select a profile image';
+      } else if (!hasLocation) {
+        missingFields = true;
+        errorMessage = 'Please detect your location';
+      }
+
+      if (missingFields) {
+        setState(() {
+          _showValidationErrors = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    // Validate age is numeric and within allowed bounds (18 - 100)
+    if (age.isNotEmpty) {
+      final parsedAge = int.tryParse(age);
+      if (parsedAge == null || parsedAge < 18 || parsedAge > 100) {
         setState(() {
           _showValidationErrors = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please fill in all required fields'),
+            content: Text('Please enter a valid age between 18 and 100'),
             backgroundColor: Colors.red,
           ),
         );
@@ -274,36 +338,48 @@ class _EditInformationState extends State<EditInformation> {
           }
         }
       } else {
-        // ONBOARDING MODE: Save to local SharedPreferences only
+        // ONBOARDING MODE: Save locally
         await mymodel.User.saveProfileDetails(
           fullName: name,
           gender: _selectedGender,
           age: age,
+          location: _location,
+          latitude: _latitude,
+          longitude: _longitude,
         );
 
+        // Verify that profile details were written to SharedPreferences
+        final _prefs = await SharedPreferences.getInstance();
+        debugPrint(
+            '[AboutYou] Saved profile details -> fullName=${_prefs.getString('user_fullName')}, location=${_prefs.getString('user_location')}');
+
         // Save profile image locally if selected
+        String? savedImagePath;
         if (_profileImage != null) {
-          await mymodel.User.saveProfileImageLocally(_profileImage!);
+          savedImagePath =
+              await mymodel.User.saveProfileImageLocally(_profileImage!);
+          debugPrint('[AboutYou] Saved profile image locally: $savedImagePath');
         }
 
-        // Save location to SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        if (_location != null) {
-          await prefs.setString('user_location', _location!);
-        }
-        if (_latitude != null) {
-          await prefs.setDouble('user_latitude', _latitude!);
-        }
-        if (_longitude != null) {
-          await prefs.setDouble('user_longitude', _longitude!);
-        }
+        debugPrint(
+            '[AboutYou] Onboarding save complete -> location=$_location');
 
         if (mounted) {
+          // Mark onboarding progress so app can resume in the right step
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('onboarding_step', 'preferences');
+
           // Navigate to next step in onboarding (interests page)
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const ChatSettingsPage(isOnboarding: true),
+              builder: (context) => ChatSettingsPage(
+                isOnboarding: true,
+                profileImage: savedImagePath,
+                userName: name,
+                userGender: _selectedGender,
+                userAge: age.toString(),
+              ),
             ),
           );
         }
@@ -527,13 +603,15 @@ class _EditInformationState extends State<EditInformation> {
 
                         // Gender & Age Row
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
+                              flex: 4,
                               child: _buildElegantDropdown(theme),
                             ),
-                            SizedBox(width: 20.w),
+                            SizedBox(width: 15.w),
                             Expanded(
+                              flex: 3,
                               child: _buildElegantInput(
                                 theme: theme,
                                 label: 'AGE',
@@ -602,7 +680,7 @@ class _EditInformationState extends State<EditInformation> {
         SizedBox(height: 8.h),
         Row(
           children: [
-            Icon(icon, size: 20.sp, color: theme.hintColor),
+            Icon(icon, size: 20.sp, color: theme.primaryColor),
             SizedBox(width: 12.w),
             Expanded(
               child: TextField(
@@ -654,14 +732,15 @@ class _EditInformationState extends State<EditInformation> {
         ),
         SizedBox(height: 8.h),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor.withOpacity(0.5),
             borderRadius: BorderRadius.circular(12.r),
             border: Border.all(
               color: hasValue
-                  ? theme.primaryColor.withOpacity(0.3)
-                  : theme.dividerColor.withOpacity(0.2),
+                  ? theme.primaryColor.withOpacity(0.5)
+                  : theme.dividerColor.withOpacity(0.3),
+              width: 1.2,
             ),
           ),
           child: DropdownButtonHideUnderline(
@@ -677,15 +756,7 @@ class _EditInformationState extends State<EditInformation> {
               ),
               isExpanded: true,
               isDense: true,
-              icon: Container(
-                padding: EdgeInsets.all(4.w),
-                decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6.r),
-                ),
-                child: Icon(Icons.keyboard_arrow_down_rounded,
-                    color: theme.primaryColor, size: 18.sp),
-              ),
+              icon: const SizedBox(),
               dropdownColor: theme.cardColor,
               borderRadius: BorderRadius.circular(12.r),
               style: theme.textTheme.bodyLarge
@@ -706,7 +777,7 @@ class _EditInformationState extends State<EditInformation> {
                       SizedBox(width: 8.w),
                       Text(g,
                           style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.w500)),
+                              ?.copyWith(fontWeight: FontWeight.w600)),
                     ],
                   );
                 }).toList();
@@ -745,7 +816,7 @@ class _EditInformationState extends State<EditInformation> {
                           g,
                           style: TextStyle(
                             fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
                             color: isSelected ? theme.primaryColor : null,
                           ),
                         ),
@@ -941,12 +1012,18 @@ class _EditInformationState extends State<EditInformation> {
                 image: _profileImage != null
                     ? DecorationImage(
                         image: FileImage(_profileImage!), fit: BoxFit.cover)
-                    : _profileImageUrl != null
+                    : (_profileImageUrl != null &&
+                            _profileImageUrl!.startsWith('http'))
                         ? DecorationImage(
                             image:
                                 CachedNetworkImageProvider(_profileImageUrl!),
                             fit: BoxFit.cover)
-                        : null,
+                        : (_profileImageUrl != null &&
+                                File(_profileImageUrl!).existsSync())
+                            ? DecorationImage(
+                                image: FileImage(File(_profileImageUrl!)),
+                                fit: BoxFit.cover)
+                            : null,
               ),
               child: !hasImage
                   ? Icon(Icons.person_rounded,

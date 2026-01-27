@@ -12,6 +12,7 @@ import 'package:veil_chat_application/services/chat_service.dart';
 import 'package:veil_chat_application/views/settings/blocked_users_page.dart';
 import 'package:veil_chat_application/widgets/docs_dialogs.dart' as dia;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:veil_chat_application/services/presence_service.dart';
 
 import '../profile/profile_page.dart';
 
@@ -43,6 +44,9 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _showProfilePhotoToStrangers = false;
   bool _showProfilePhotoToFriends = false;
   bool _hideReadReceipts = false;
+
+  final PresenceService _presenceService = PresenceService();
+
 
   @override
   void initState() {
@@ -713,7 +717,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Text('About Us'),
                 ),
                 TextButton(
-                  onPressed: () => mymodel.User.logout(context),
+                  onPressed: _logout,
                   child: Text('Logout'),
                 ),
                 const SizedBox(height: 20.0),
@@ -724,4 +728,44 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
+
+  Future<void> _logout() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Determine the user id (prefer Firebase current user, fallback to _user)
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? _user?.uid;
+      if (uid != null) {
+        try {
+          await _presenceService.goOffline(uid);
+        } catch (e) {
+          debugPrint('[Settings] Error setting offline: $e');
+        }
+      }
+
+      if (mounted) {
+        await mymodel.User.logout(context);
+      }
+    }
+  }
+
 }

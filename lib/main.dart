@@ -100,6 +100,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 import 'package:veil_chat_application/services/presence_service.dart';
+import 'package:veil_chat_application/views/entry/about_you.dart';
+import 'package:veil_chat_application/views/settings/chat_settings.dart';
+import 'package:veil_chat_application/services/firestore_service.dart';
+import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
 // import 'models/user_model.dart';
@@ -116,12 +120,45 @@ void main() async {
   final isFirstRun = prefs.getBool('isFirstRun') ?? true;
   final isLoggedIn = prefs.getString('uid') != null;
   final userId = prefs.getString('uid');
+  // Read onboarding step from prefs. We'll validate against Firestore in case writes failed when app was closed quickly.
+  var onboardingStep = prefs.getString('onboarding_step') ?? 'completed';
+
+  // If a userId exists, validate onboarding state from Firestore (fallback)
+  if (userId != null) {
+    try {
+      final userDoc = await FirestoreService().getUser(userId);
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+        // Basic checks to determine where the user left off
+        final fullName = (userData['fullName'] as String?) ?? '';
+        final profilePicUrl = (userData['profilePicUrl'] as String?) ?? '';
+        final chatPrefs = userData['chatPreferences'] as Map<String, dynamic>?;
+        final interests = chatPrefs != null ? (chatPrefs['interests'] as List<dynamic>?) : null;
+
+        if (fullName.isEmpty || profilePicUrl.isEmpty) {
+          onboardingStep = 'about';
+          await prefs.setString('onboarding_step', onboardingStep);
+        } else if (interests == null || interests.isEmpty) {
+          onboardingStep = 'preferences';
+          await prefs.setString('onboarding_step', onboardingStep);
+        } else {
+          onboardingStep = 'completed';
+          await prefs.setString('onboarding_step', onboardingStep);
+        }
+
+        print('Startup onboarding check: userId=$userId onboardingStep=$onboardingStep');
+      }
+    } catch (e) {
+      print('Failed to validate onboarding from Firestore: $e');
+    }
+  }
 
   runApp(
     MyApp(
       isFirstRun: isFirstRun,
       isLoggedIn: isLoggedIn,
       userId: userId,
+      onboardingStep: onboardingStep,
     ),
   );
 }
@@ -130,12 +167,14 @@ class MyApp extends StatefulWidget {
   final bool isFirstRun;
   final bool isLoggedIn;
   final String? userId;
+  final String onboardingStep;
 
   const MyApp({
     super.key,
     required this.isFirstRun,
     required this.isLoggedIn,
     this.userId,
+    this.onboardingStep = 'completed',
   });
 
   @override
@@ -211,7 +250,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     title: 'ChatApp title',
                     theme: appTheme.currentTheme,
                     home: widget.isLoggedIn
-                        ? HomePageFrame()
+                        ? (widget.onboardingStep == 'about'
+                            ? EditInformation(editType: 'about')
+                            : (widget.onboardingStep == 'preferences'
+                                ? ChatSettingsPage(isOnboarding: true)
+                                : HomePageFrame()))
                         : (widget.isFirstRun ? Welcome() : Login()),
                   );
                 },

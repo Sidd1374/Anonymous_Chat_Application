@@ -8,6 +8,7 @@ import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:veil_chat_application/services/presence_service.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 import '../entry/about_you.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_theme.dart';
 import 'register.dart';
@@ -332,13 +333,16 @@ class _LoginState extends State<Login> {
               MaterialPageRoute(builder: (context) => HomePageFrame()),
             );
           } else {
-            _showErrorDialog("User data not found in Firestore.");
+            // User signed in but no profile found in Firestore -> prompt to register
+            _showRegisterDialog("No profile found. Would you like to register?");
           }
         }
       } on FirebaseAuthException catch (e) {
         String message = 'Login failed';
         if (e.code == 'user-not-found') {
-          message = 'No user found for that email.';
+          // Offer to register if no account exists
+          _showRegisterDialog('No account found for that email. Would you like to register?');
+          return;
         } else if (e.code == 'wrong-password') {
           message = 'Wrong password.';
         }
@@ -387,15 +391,25 @@ class _LoginState extends State<Login> {
       mymodel.User appUser;
 
       if (userDoc.exists) {
+        // Existing user -> fetch, save locally and go to Home
         appUser = mymodel.User.fromJson(userDoc.data()!);
+        await mymodel.User.saveToPrefs(appUser);
+        await _presenceService.setOnlineStatus(appUser.uid, true);
+        if (appUser.profilePicUrl != null && appUser.profilePicUrl!.isNotEmpty) {
+          ProfileImageService().loadProfileImage(appUser.profilePicUrl!);
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomePageFrame()),
+        );
       } else {
+        // New user -> create profile and go to onboarding
         appUser = mymodel.User(
           uid: firebaseUser.uid,
           email: firebaseUser.email ?? '',
           fullName: firebaseUser.displayName ?? '',
           createdAt: Timestamp.now(),
-          profilePicUrl:
-              null, // User will upload their own image in the About page
+          profilePicUrl: null,
           gender: null,
           age: null,
           interests: const [],
@@ -413,22 +427,48 @@ class _LoginState extends State<Login> {
         );
 
         await _firestoreService.createUser(appUser);
+        await mymodel.User.saveToPrefs(appUser);
+        // Mark onboarding progress at 'about' so app resumes here if closed
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('onboarding_step', 'about');
+
+        await _presenceService.setOnlineStatus(appUser.uid, true);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => EditInformation(editType: 'about')),
+        );
       }
-
-      await mymodel.User.saveToPrefs(appUser);
-      // Set user online after Google login
-      await _presenceService.setOnlineStatus(appUser.uid, true);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-            builder: (context) => EditInformation(editType: 'about')),
-      );
     } on FirebaseAuthException catch (e) {
       _showErrorDialog(e.message ?? 'Google Sign-In failed.');
     } catch (e) {
       _showErrorDialog('Google Sign-In failed. Please try again.');
     }
+  }
+
+  void _showRegisterDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Account Not Found'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          TextButton(
+            child: const Text('Register'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => Register()));
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   void _showErrorDialog(String message) {

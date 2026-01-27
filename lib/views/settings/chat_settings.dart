@@ -5,6 +5,12 @@ import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/views/entry/profile_created.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:veil_chat_application/services/cloudinary_service.dart';
 
 class ChatSettingsPage extends StatefulWidget {
   final int verificationLevel;
@@ -215,7 +221,37 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
           _isLoading = false;
         });
       } else {
-        setState(() => _isLoading = false);
+        if (widget.isOnboarding) {
+          // Try to get lightweight profile details (saved during onboarding)
+          final profile = await mymodel.User.getProfileDetails();
+          final userAgeStr = widget.userAge ?? profile['age'];
+          debugPrint(
+              '[ChatSettings] No full user prefs found. profile age = $userAgeStr');
+
+          int userAge = 25;
+          if (userAgeStr != null && userAgeStr.toString().isNotEmpty) {
+            userAge = int.tryParse(userAgeStr.toString()) ?? 25;
+          }
+
+          double minAge = (userAge - 2).toDouble();
+          double maxAge = (userAge + 3).toDouble();
+
+          // Handle edge cases at boundaries
+          if (minAge < _minAgeLimit) {
+            minAge = _minAgeLimit;
+            maxAge = (_minAgeLimit + 5).clamp(_minAgeLimit, _maxAgeLimit);
+          } else if (maxAge > _maxAgeLimit) {
+            maxAge = _maxAgeLimit;
+            minAge = (_maxAgeLimit - 5).clamp(_minAgeLimit, _maxAgeLimit);
+          }
+
+          setState(() {
+            _ageRange = RangeValues(minAge, maxAge);
+            _isLoading = false;
+          });
+        } else {
+          setState(() => _isLoading = false);
+        }
       }
     } catch (e) {
       debugPrint('[ChatSettings] Error loading preferences: $e');
@@ -225,10 +261,62 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
 
   Future<void> _savePreferences() async {
     if (_user == null) {
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
+      // Onboarding path: construct a minimal user from saved lightweight profile or Firebase Auth
+      final prefs = await SharedPreferences.getInstance();
+      final profile = await mymodel.User.getProfileDetails();
+      final uid =
+          prefs.getString('uid') ?? FirebaseAuth.instance.currentUser?.uid;
+
+      if (uid == null) {
+        debugPrint(
+            '[ChatSettings] No UID found for onboarding user; cannot save preferences.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Unable to save preferences: missing user ID'),
+                backgroundColor: Colors.red),
+          );
+        }
+        return;
       }
-      return;
+
+        final resolvedName = widget.userName ?? profile['fullName'] ?? '';
+        final resolvedGender = widget.userGender ?? profile['gender'];
+        final resolvedAge = widget.userAge ?? profile['age']?.toString();
+        // Fallback to saved local profile image path if widget.profileImage is null
+        String? resolvedProfileImage = widget.profileImage;
+        resolvedProfileImage ??= prefs.getString('profile_image_path');
+
+        // Retrieve location from profile first, then prefs
+        final String? resolvedLocation = profile['location'] ?? prefs.getString('user_location');
+        final double? resolvedLat = profile['latitude'] ?? prefs.getDouble('user_latitude');
+        final double? resolvedLng = profile['longitude'] ?? prefs.getDouble('user_longitude');
+
+        _user = mymodel.User(
+        uid: uid,
+        email: prefs.getString('user_data') != null
+          ? (jsonDecode(prefs.getString('user_data')!)
+              as Map<String, dynamic>)['email'] ??
+            ''
+          : '',
+        fullName: resolvedName,
+        createdAt: Timestamp.now(),
+        profilePicUrl: resolvedProfileImage,
+        gender: resolvedGender,
+        age: resolvedAge,
+        interests: const [],
+        verificationLevel: widget.verificationLevel,
+        chatPreferences: null,
+        privacySettings: mymodel.PrivacySettings(
+          showProfilePicToFriends: true, showProfilePicToStrangers: false),
+        location: resolvedLocation,
+        latitude: resolvedLat,
+        longitude: resolvedLng,
+        locationUpdatedAt: Timestamp.now(),
+        );
+
+      debugPrint(
+          '[ChatSettings] Built minimal onboarding user: uid=$uid, name=$resolvedName, age=$resolvedAge, gender=$resolvedGender, location=$resolvedLocation');
     }
 
     // Validate minimum interests/dislikes (required for all users)
@@ -272,6 +360,41 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
     setState(() => _isSaving = true);
 
     try {
+      // 1. Handle Profile Image Upload (only for onboarding or if image changed)
+      String? finalProfilePicUrl = _user?.profilePicUrl;
+
+      // During onboarding, check if we have a local path that needs uploading
+      if (widget.isOnboarding) {
+        final prefs = await SharedPreferences.getInstance();
+        final localPath =
+            widget.profileImage ?? prefs.getString('profile_image_path');
+
+        if (localPath != null && !localPath.startsWith('http')) {
+          debugPrint(
+              '[ChatSettings] Uploading local profile image to Cloudinary: $localPath');
+          try {
+            final uploadResult = await cloudinary.uploadFileUnsigned(
+              filePath: localPath,
+            );
+            finalProfilePicUrl = uploadResult.secureUrl;
+            debugPrint(
+                '[ChatSettings] Image uploaded successfully: $finalProfilePicUrl');
+          } catch (e) {
+            debugPrint('[ChatSettings] Cloudinary upload failed: $e');
+            // We could either stop here or continue with local path (though local path won't work for other users)
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text('Image upload failed: $e'),
+                    backgroundColor: Colors.red),
+              );
+            }
+            setState(() => _isSaving = false);
+            return;
+          }
+        }
+      }
+
       // Build updated chat preferences
       final updatedChatPrefs = mymodel.ChatPreferences(
         matchWithGender: _oppositeGenderOnly ? 'opposite' : null,
@@ -288,17 +411,46 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
       if (widget.isOnboarding) {
         // During onboarding, save all user data (profile + chat preferences)
         // since About page only saved to local prefs
+        // Resolve profile details from available sources (user object, widget params, or lightweight prefs)
+        String? resolvedAge = _user!.age;
+        String resolvedName = _user!.fullName;
+        String? resolvedGender = _user!.gender;
+        String? resolvedLocation = _user!.location;
+        double? resolvedLat = _user!.latitude;
+        double? resolvedLng = _user!.longitude;
+
+        if (widget.isOnboarding) {
+          final profile = await mymodel.User.getProfileDetails();
+          resolvedAge =
+              resolvedAge ?? widget.userAge ?? profile['age']?.toString();
+          resolvedName = (resolvedName.isNotEmpty)
+              ? resolvedName
+              : (widget.userName ?? profile['fullName'] ?? resolvedName);
+          resolvedGender =
+              resolvedGender ?? widget.userGender ?? profile['gender'];
+          resolvedLocation = resolvedLocation ?? profile['location'];
+          resolvedLat = resolvedLat ?? profile['latitude'] as double?;
+          resolvedLng = resolvedLng ?? profile['longitude'] as double?;
+        }
+
+        debugPrint(
+            '[ChatSettings] Resolved profile for saving: name=$resolvedName, gender=$resolvedGender, age=$resolvedAge, location=$resolvedLocation');
+
         firestoreData = {
-          'fullName': _user!.fullName,
-          'gender': _user!.gender,
-          'age': _user!.age,
-          'profilePicUrl': _user!.profilePicUrl,
+          'uid': _user!.uid, // Ensure UID is included
+          'email': _user!.email,
+          'fullName': resolvedName,
+          'gender': resolvedGender,
+          'age': resolvedAge,
+          'profilePicUrl': finalProfilePicUrl ?? _user!.profilePicUrl,
           'interests': _user!.interests,
-          'location': _user!.location,
-          'latitude': _user!.latitude,
-          'longitude': _user!.longitude,
-          'locationUpdatedAt': _user!.locationUpdatedAt,
+          'location': resolvedLocation,
+          'latitude': resolvedLat,
+          'longitude': resolvedLng,
+          'locationUpdatedAt': _user!.locationUpdatedAt ?? Timestamp.now(),
           'chatPreferences': updatedChatPrefs.toJson(),
+          'createdAt': _user!.createdAt, // Include creation time
+          'privacySettings': _user!.privacySettings?.toJson(),
         };
       } else {
         // Regular mode: only update chat preferences
@@ -310,26 +462,52 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
       await FirestoreService().updateUser(_user!.uid, firestoreData);
 
       // Update local user and save to SharedPreferences
+      // Ensure resolvedName, resolvedGender, and resolvedAge are defined
+      String? resolvedAge = _user!.age;
+      String resolvedName = _user!.fullName;
+      String? resolvedGender = _user!.gender;
+      String? resolvedLocation = _user!.location;
+      double? resolvedLat = _user!.latitude;
+      double? resolvedLng = _user!.longitude;
+
+      if (widget.isOnboarding) {
+        final profile = await mymodel.User.getProfileDetails();
+        resolvedAge =
+            resolvedAge ?? widget.userAge ?? profile['age']?.toString();
+        resolvedName = (resolvedName.isNotEmpty)
+            ? resolvedName
+            : (widget.userName ?? profile['fullName'] ?? resolvedName);
+        resolvedGender =
+            resolvedGender ?? widget.userGender ?? profile['gender'];
+        resolvedLocation = resolvedLocation ?? profile['location'];
+        resolvedLat = resolvedLat ?? profile['latitude'] as double?;
+        resolvedLng = resolvedLng ?? profile['longitude'] as double?;
+      }
+
       final updatedUser = mymodel.User(
         uid: _user!.uid,
         email: _user!.email,
-        fullName: _user!.fullName,
+        fullName: resolvedName,
         createdAt: _user!.createdAt,
-        profilePicUrl: _user!.profilePicUrl,
-        gender: _user!.gender,
-        age: _user!.age,
+        profilePicUrl: finalProfilePicUrl ?? _user!.profilePicUrl,
+        gender: resolvedGender,
+        age: resolvedAge,
         interests: _user!.interests,
         verificationLevel: _user!.verificationLevel,
         chatPreferences: updatedChatPrefs,
         privacySettings: _user!.privacySettings,
-        location: _user!.location,
-        latitude: _user!.latitude,
-        longitude: _user!.longitude,
-        locationUpdatedAt: _user!.locationUpdatedAt,
+        location: resolvedLocation,
+        latitude: resolvedLat,
+        longitude: resolvedLng,
+        locationUpdatedAt: _user!.locationUpdatedAt ?? Timestamp.now(),
       );
       await mymodel.User.saveToPrefs(updatedUser);
 
       debugPrint('[ChatSettings] Preferences saved successfully');
+
+      // Mark onboarding completed so app resumes to Home on restart
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('onboarding_step', 'completed');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -483,7 +661,33 @@ class _ChatSettingsPageState extends State<ChatSettingsPage>
               )
             : null, // Use default back button for non-onboarding
       ),
-      body: content,
+      body: Stack(
+        children: [
+          content,
+          if (_isSaving)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: theme.primaryColor),
+                    SizedBox(height: 16.h),
+                    Text(
+                      widget.isOnboarding
+                          ? 'Creating your profile...'
+                          : 'Saving preferences...',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

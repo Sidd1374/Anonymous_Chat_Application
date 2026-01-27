@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_model.dart' as app_user;
 
@@ -10,7 +9,7 @@ class FirestoreService {
   }
 
   Future<void> updateUser(String uid, Map<String, dynamic> data) {
-    return _db.collection('users').doc(uid).update(data);
+    return _db.collection('users').doc(uid).set(data, SetOptions(merge: true));
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>> getUser(String uid) {

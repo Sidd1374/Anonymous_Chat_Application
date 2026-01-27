@@ -11,6 +11,9 @@ import 'login.dart';
 import '../../widgets/docs_dialogs.dart';
 import '../../models/user_model.dart' as app_user;
 import '../../services/firestore_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:veil_chat_application/services/presence_service.dart';
+import 'package:veil_chat_application/services/profile_image_service.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -29,6 +32,7 @@ class _RegisterState extends State<Register> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController =
       TextEditingController();
+  final PresenceService _presenceService = PresenceService();
 
   @override
   Widget build(BuildContext context) {
@@ -335,45 +339,88 @@ class _RegisterState extends State<Register> {
                         OutlinedButton(
                           onPressed: () async {
                             try {
-                              print("Google Sign-In started");
                               // Initialize GoogleSignIn with serverClientId (Web Client ID from Firebase)
                               await GoogleSignIn.instance.initialize(
                                 serverClientId: '213748404792-notissn77ktp7st6jl34q0te4s4fro1c.apps.googleusercontent.com',
                               );
-                              
+
                               final GoogleSignInAccount? googleUser =
                                   await GoogleSignIn.instance.authenticate();
-                              print("Google User: $googleUser");
 
                               if (googleUser == null) {
                                 // The user canceled the sign-in
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Google sign-in cancelled')),
+                                );
                                 return;
                               }
 
-                              // Obtain the Google Sign-In authentication details
                               final GoogleSignInAuthentication googleAuth =
                                   await googleUser.authentication;
 
-                              // Create a new credential for Firebase
                               final credential = GoogleAuthProvider.credential(
                                 idToken: googleAuth.idToken,
                               );
 
-                              // Sign in to Firebase with the Google credential
-                              await FirebaseAuth.instance
+                              final userCredential = await FirebaseAuth.instance
                                   .signInWithCredential(credential);
 
-                              // Navigate to the home page after successful sign-in
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => EditInformation(
-                                          editType: 'about',
-                                    )),
-                              );
+                              final firebaseUser = userCredential.user;
+                              if (firebaseUser == null) {
+                                _showErrorDialog('Google authentication failed.');
+                                return;
+                              }
+
+                              final userDoc = await FirestoreService().getUser(firebaseUser.uid);
+
+                              if (userDoc.exists) {
+                                final existingUser = app_user.User.fromJson(userDoc.data()!);
+                                await app_user.User.saveToPrefs(existingUser);
+                                await _presenceService.setOnlineStatus(existingUser.uid, true);
+                                if (existingUser.profilePicUrl != null && existingUser.profilePicUrl!.isNotEmpty) {
+                                  ProfileImageService().loadProfileImage(existingUser.profilePicUrl!);
+                                }
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => HomePageFrame()),
+                                );
+                              } else {
+                                final newUser = app_user.User(
+                                  uid: firebaseUser.uid,
+                                  email: firebaseUser.email ?? '',
+                                  fullName: firebaseUser.displayName ?? '',
+                                  createdAt: Timestamp.now(),
+                                  profilePicUrl: firebaseUser.photoURL,
+                                  gender: null,
+                                  age: null,
+                                  interests: [],
+                                  verificationLevel: 1,
+                                  chatPreferences: app_user.ChatPreferences(
+                                    matchWithGender: "Any",
+                                    minAge: 0,
+                                    maxAge: 0,
+                                    onlyVerified: false,
+                                  ),
+                                  privacySettings: app_user.PrivacySettings(
+                                    showProfilePicToFriends: true,
+                                    showProfilePicToStrangers: false,
+                                  ),
+                                );
+
+                                await FirestoreService().createUser(newUser);
+                                await app_user.User.saveToPrefs(newUser);
+                                // Mark onboarding progress at 'about' so app resumes here if closed
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setString('onboarding_step', 'about');
+                                await _presenceService.setOnlineStatus(newUser.uid, true);
+
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => EditInformation(editType: 'about')),
+                                );
+                              }
                             } catch (e, stackTrace) {
-                              // print("Google Sign-In Error: $e");
-                              // print("Stack trace: $stackTrace");
                               _showErrorDialog(
                                   "Google Sign-In failed: $e");
                             }
@@ -474,6 +521,9 @@ class _RegisterState extends State<Register> {
         final user = app_user.User.fromJson(userDoc.data()!);
         await app_user.User.saveToPrefs(user);
       }
+      // Mark onboarding progress at 'about'
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('onboarding_step', 'about');
     }
     Navigator.push(
       context,

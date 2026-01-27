@@ -162,24 +162,30 @@ class User {
     required String fullName,
     required String gender,
     required String age,
+    String? location,
+    double? latitude,
+    double? longitude,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_fullName', fullName);
     await prefs.setString('user_gender', gender);
     await prefs.setString('user_age', age);
+    if (location != null) await prefs.setString('user_location', location);
+    if (latitude != null) await prefs.setDouble('user_latitude', latitude);
+    if (longitude != null) await prefs.setDouble('user_longitude', longitude);
   }
 
   // Retrieve name, age, and gender from SharedPreferences
   static Future<Map<String, dynamic>> getProfileDetails() async {
     final prefs = await SharedPreferences.getInstance();
-    final dynamic savedAge =
-        prefs.get('user_age'); // Use get() to retrieve any type
+    final dynamic savedAge = prefs.get('user_age');
     return {
       'fullName': prefs.getString('user_fullName'),
       'gender': prefs.getString('user_gender'),
-      'age': savedAge != null
-          ? savedAge.toString()
-          : null, // Convert to String if not null
+      'age': savedAge != null ? savedAge.toString() : null,
+      'location': prefs.getString('user_location'),
+      'latitude': prefs.getDouble('user_latitude'),
+      'longitude': prefs.getDouble('user_longitude'),
     };
   }
 

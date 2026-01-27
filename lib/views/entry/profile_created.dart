@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -98,24 +99,38 @@ class ProfileCreated extends StatelessWidget {
                 ),
                 child: profileImage != null
                     ? ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: profileImage!,
-                          fit: BoxFit.cover,
-                          width: 100.w,
-                          height: 100.h,
-                          placeholder: (context, url) => Center(
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Icon(
-                            Icons.person,
-                            size: 50.w,
-                            color: theme.hintColor,
-                          ),
-                        ),
+                        child: profileImage!.startsWith('http')
+                            ? CachedNetworkImage(
+                                imageUrl: profileImage!,
+                                fit: BoxFit.cover,
+                                width: 100.w,
+                                height: 100.h,
+                                placeholder: (context, url) => const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Icon(
+                                  Icons.person,
+                                  size: 50.w,
+                                  color: theme.hintColor,
+                                ),
+                              )
+                            : Image.file(
+                                File(profileImage!),
+                                fit: BoxFit.cover,
+                                width: 100.w,
+                                height: 100.h,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(
+                                  Icons.person,
+                                  size: 50.w,
+                                  color: theme.hintColor,
+                                ),
+                              ),
                       )
                     : Icon(
                         Icons.person,
