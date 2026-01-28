@@ -55,3 +55,18 @@ push.bat
 # Local environment files
 .env
 .env.*
+
+# Node / Firebase
+node_modules/
+functions/node_modules/
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+
+# Developer files 
+app_push.ps1*
+storage.rules*
+analysis_output.txt*    
+Temp_Cammands.txt

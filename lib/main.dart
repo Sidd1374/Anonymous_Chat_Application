@@ -96,6 +96,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/container.dart';
@@ -116,6 +117,13 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Initialize App Check
+  await FirebaseAppCheck.instance.activate(
+    // ignore: deprecated_member_use
+    androidProvider: AndroidProvider.debug,
+    appleProvider: AppleProvider.debug,
+  );
+
   final prefs = await SharedPreferences.getInstance();
   final isFirstRun = prefs.getBool('isFirstRun') ?? true;
   final isLoggedIn = prefs.getString('uid') != null;
@@ -133,7 +141,9 @@ void main() async {
         final fullName = (userData['fullName'] as String?) ?? '';
         final profilePicUrl = (userData['profilePicUrl'] as String?) ?? '';
         final chatPrefs = userData['chatPreferences'] as Map<String, dynamic>?;
-        final interests = chatPrefs != null ? (chatPrefs['interests'] as List<dynamic>?) : null;
+        final interests = chatPrefs != null
+            ? (chatPrefs['interests'] as List<dynamic>?)
+            : null;
 
         if (fullName.isEmpty || profilePicUrl.isEmpty) {
           onboardingStep = 'about';
@@ -146,7 +156,8 @@ void main() async {
           await prefs.setString('onboarding_step', onboardingStep);
         }
 
-        print('Startup onboarding check: userId=$userId onboardingStep=$onboardingStep');
+        print(
+            'Startup onboarding check: userId=$userId onboardingStep=$onboardingStep');
       }
     } catch (e) {
       print('Failed to validate onboarding from Firestore: $e');

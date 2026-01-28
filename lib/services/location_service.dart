@@ -62,7 +62,8 @@ class LocationResult {
     );
   }
 
-  factory LocationResult.error(String message, {LocationPermissionStatus? status}) {
+  factory LocationResult.error(String message,
+      {LocationPermissionStatus? status}) {
     return LocationResult(
       success: false,
       errorMessage: message,
@@ -80,10 +81,10 @@ enum LocationPermissionStatus {
 }
 
 /// Service for handling location detection and geocoding
-/// 
+///
 /// This service uses the device's GPS to detect the user's location
 /// and then reverse geocodes it to get the city/region name.
-/// 
+///
 /// Why auto-detection?
 /// - Prevents location spoofing/fraud
 /// - Ensures accurate distance-based matching
@@ -134,7 +135,7 @@ class LocationService {
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
-      
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
@@ -157,12 +158,12 @@ class LocationService {
   }
 
   /// Get the current location and reverse geocode it to get city/region
-  /// 
+  ///
   /// This method:
   /// 1. Gets the device's current GPS coordinates
   /// 2. Reverse geocodes to get the city and state/region name
   /// 3. Returns a LocationData object with all the information
-  /// 
+  ///
   /// The location accuracy is set to 'medium' to balance between
   /// accuracy and battery usage. For matching purposes, we only need
   /// city-level accuracy.
@@ -177,14 +178,28 @@ class LocationService {
         );
       }
 
-      // Get current position with medium accuracy (city-level is sufficient)
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 15),
-      );
+      Position? position;
+      try {
+        // Try to get current position with increased timeout (30 seconds)
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 30),
+        );
+      } catch (e) {
+        debugPrint(
+            '[LocationService] getCurrentPosition failed, trying fallback: $e');
+        // Fallback: Try to get last known position
+        position = await Geolocator.getLastKnownPosition();
+
+        if (position == null) {
+          return LocationResult.error(
+              'Location detection timed out. Please ensure GPS is on and try again.');
+        }
+      }
 
       // Reverse geocode to get the location name
-      final locationName = await _reverseGeocode(position.latitude, position.longitude);
+      final locationName =
+          await _reverseGeocode(position.latitude, position.longitude);
 
       return LocationResult.success(LocationData(
         locationName: locationName,
@@ -203,26 +218,28 @@ class LocationService {
   Future<String> _reverseGeocode(double latitude, double longitude) async {
     try {
       final placemarks = await placemarkFromCoordinates(latitude, longitude);
-      
+
       if (placemarks.isEmpty) {
         return 'Unknown Location';
       }
 
       final place = placemarks.first;
-      
+
       // Build location string: City, State/Region
       final components = <String>[];
-      
+
       if (place.locality != null && place.locality!.isNotEmpty) {
         components.add(place.locality!);
-      } else if (place.subAdministrativeArea != null && place.subAdministrativeArea!.isNotEmpty) {
+      } else if (place.subAdministrativeArea != null &&
+          place.subAdministrativeArea!.isNotEmpty) {
         components.add(place.subAdministrativeArea!);
       }
-      
-      if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+
+      if (place.administrativeArea != null &&
+          place.administrativeArea!.isNotEmpty) {
         components.add(place.administrativeArea!);
       }
-      
+
       if (components.isEmpty) {
         // Fallback to country if no city/state available
         if (place.country != null && place.country!.isNotEmpty) {
@@ -230,7 +247,7 @@ class LocationService {
         }
         return 'Unknown Location';
       }
-      
+
       return components.join(', ');
     } catch (e) {
       debugPrint('[LocationService] Geocoding error: $e');
@@ -254,21 +271,25 @@ class LocationService {
   /// Calculate distance between two coordinates in kilometers
   /// Uses the Haversine formula for accurate distance calculation
   double calculateDistance(
-    double lat1, double lon1,
-    double lat2, double lon2,
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
   ) {
-    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000; // Convert to km
+    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) /
+        1000; // Convert to km
   }
 
   /// Check if a location update is needed
   /// Location should be refreshed periodically (e.g., every 24 hours)
   /// or if the user has moved significantly
-  bool shouldUpdateLocation(Timestamp? lastUpdated, {Duration maxAge = const Duration(hours: 24)}) {
+  bool shouldUpdateLocation(Timestamp? lastUpdated,
+      {Duration maxAge = const Duration(hours: 24)}) {
     if (lastUpdated == null) return true;
-    
+
     final lastUpdate = lastUpdated.toDate();
     final now = DateTime.now();
-    
+
     return now.difference(lastUpdate) > maxAge;
   }
 

@@ -1,100 +1,109 @@
-<<<<<<< HEAD
+# Veil Chat 🎭
 
-# ChatApp
+Veil Chat is a professional, high-performance messaging platform that balances the security of friendship with the excitement of anonymous discovery. It uses a cloud-powered matching engine to connect users based on deep compatibility rather than just proximity.
 
-ChatApp is a dynamic messaging platform that enables users to connect with friends and engage in anonymous chats with strangers. It offers a safe, easy-to-use environment for maintaining friendships and exploring new conversations. Additionally, ChatApp facilitates chatting with users of the opposite gender, fostering diverse interactions. The platform is also independent and accessible via a mobile app and a web version built with React and Node.js.
+---
 
-## Features
+## 🚀 Key Functionality
 
-### 1. **Friend System**
-- Send and accept friend requests.
-- Maintain a dedicated friends list.
-- Private and secure chats with friends.
+### 1. **Hyper-Personalized Global Matching**
+Our matching engine doesn't just look for "anyone online." It runs a multi-layered scoring algorithm in the cloud:
+- **Strict Filtering**: Automatically excludes any user who has one of your **Deal-Breakers** as an interest.
+- **Compatibility Scoring**: Factors in shared interests (40%), similar dislikes (10%), age proximity (20%), and physical location (15%).
+- **Verification Bonus**: Verified users get a 15% prioritization boost to ensure high-quality matches.
+- **Safety**: Matches are temporary (48-hour window) and anonymous until both users decide to become friends.
 
-### 2. **Anonymous Chats**
-- Connect randomly with strangers using temporary usernames (e.g., "Stranger123").
-- Option to disconnect and find new conversations instantly.
-- Simple queue system for pairing users.
+### 2. **Professional Chat Experience**
+- **Real-time Engine**: Built on Firestore with zero-latency message delivery.
+- **Rich Media**: Supports image sharing powered by Cloudinary and local camera integration.
+- **Engagement Tools**: Message reactions (emoji), typing indicators, and detailed read receipts.
+- **Persistence**: "Friends" keep their chat history forever; "Strangers" have a ticking timer until the connection expires.
 
-### 3. **Gender-Based Pairing**
-- Chat with users of the opposite gender for meaningful interactions.
-- Customizable preferences for anonymous chat pairings.
+### 3. **Privacy & Presence**
+- **Advanced Presence**: Real-time "Online" status and "Last seen" timestamps.
+- **Granular Privacy**: Toggle who sees your profile picture (Friends only vs. Everyone).
+- **Control**: Block or report users directly from the chat menu with automatic moderator flagging.
 
-### 4. **Theme Support**
-- Light and dark mode themes for a personalized experience.
+---
 
-### 5. **User-Friendly Design**
-- Intuitive interface with smooth navigation.
-- Optimized for performance across various devices.
+## 🗺️ Application Flow
 
-### 6. **Platform Independence**
-- Available on iOS and Android using Flutter.
-- Web version built with React and Node.js for seamless access on any device.
+```mermaid
+graph TD
+    A["User Entry (Login/Signup)"] --> B{"Current Profile?"}
+    B -- No --> C["Profile Setup (Interests/Dislikes)"]
+    B -- Yes --> D["Home Dashboard"]
+    C --> D
+    
+    D --> E["Start Global Matching"]
+    E --> F["Location & Prefs Check"]
+    F --> G["Cloud Scoring (index.js)"]
+    
+    G -- "Match Found" --> H["Anonymous Chat Room (48h)"]
+    G -- "No Match" --> I["Retry/Timeout Message"]
+    
+    H --> J{"Interaction"}
+    J -- "Likes Back" --> K["Official Friends (Permanent)"]
+    J -- "Expired" --> L["Room Deleted"]
+```
 
-## Tech Stack
-- **Mobile App**: Flutter for iOS and Android.
-- **Chat Server**: MongoDB for real-time message storage.
-- **Other Services**: Firebase for authentication and analytics.
-- **Web Version**: React and Node.js for a responsive, fast interface.
+---
 
-## Team Details
-Our team comprises dedicated developers, designers, and testers who worked together to create this platform. Key contributors:
+## 📊 Data Model (User)
 
-- **Aryan Khatri**
-    - **Phone**: +91-7827739709
-    - **Email**: aryankhatri9811@gmail.com
-    - **LinkedIn**: [Aryan Khatri](https://www.linkedin.com/in/aryankhatriak)
-- **Aarju Pal**
-    - **Phone**: +91-7908636536
-    - **Email**: aarju.pal1234@gmail.com
-    - **LinkedIn**: [Aarju Pal](https://www.linkedin.com/in/aarjupal)
-- **Siddharth Sharma**
-    - **Phone**: +91-8988568859
-    - **Email**: sidd13704@gmail.com
-    - **LinkedIn**: [Siddharth Sharma](https://www.linkedin.com/in/siddharthsharma1374)
+The core `User` model is designed for flexibility and efficient cloud-querying.
 
-## Installation
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `uid` | String | Unique Firebase Authentication ID |
+| `fullName` | String | Display name shown to friends |
+| `interests` | List<String> | Hobbies and passions (used for matching) |
+| `chatPreferences` | Object | Includes `matchWithGender`, `ageRange`, and `onlyVerified` |
+| `dealBreakers` | List<String> | Factors that disqualify a potential match |
+| `location` | GeoPoint | Latitude/Longitude for distance calculation |
+| `verificationLevel` | Integer | 1 for Base, 2 for Identity Verified |
 
-1. Clone the repository:
+---
+
+## 🛠️ Installation & Setup
+
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/Sidd1374/Anonymous_Chat_Application.git
+   cd Anonymous_Chat_Application
    ```
-2. Navigate to the project directory:
-   ```bash
-   cd ChatApp
-   ```
-3. Install dependencies:
+
+2. **Configure Flutter**:
    ```bash
    flutter pub get
    ```
-4. Run the app:
+
+3. **Configure Cloud Functions**:
+   ```bash
+   cd functions
+   npm install
+   cd ..
+   ```
+
+4. **Firebase Setup**:
+   - Run `firebase login`.
+   - Run `firebase use --add` (select your project).
+   - Deploy matching logic: `firebase deploy --only functions`.
+
+5. **Run the app**:
    ```bash
    flutter run
    ```
 
-## Assets
-The app includes logo and icon assets stored in the `assets` folder. Ensure the `pubspec.yaml` file lists all assets correctly for the app to function seamlessly.
+---
 
-## License
-This project is licensed under the MIT License. See the LICENSE file for details.
+## 👨‍💻 Developer Details
 
-## Contact
-For any questions, support, or feedback, please reach out to us at:
+**Siddharth Sharma**
+- 📧 **Email**: [sidd13704@gmail.com](mailto:sidd13704@gmail.com)
+- 🔗 **LinkedIn**: [Siddharth Sharma](https://www.linkedin.com/in/siddharthsharma1374)
+- 💻 **GitHub**: [Sidd1374](https://github.com/Sidd1374)
+- 📱 **Portfolio**: [siddharthsharma.dev](https://www.iamsidd.tech)
 
-- **General Queries**
-    - **Phone**: Not Available
-    - **Email**: veil.chat.official@gmail.com
-
-[//]: # (    - **LinkedIn**: [ChatApp Support]&#40;https://linkedin.com/company/chatapp-support&#41;)
-
-[//]: # (- **Website**: [www.chatapp.com]&#40;http://www.chatapp.com&#41;)
-
-[//]: # (- **Social Media**: Follow us on [Twitter]&#40;https://twitter.com/chatapp&#41; and [Facebook]&#40;https://facebook.com/chatapp&#41;.)
-
-[//]: # (- **Support Center**: Visit our [Help Center]&#40;http://www.chatapp.com/support&#41; for FAQs and troubleshooting.)
-
-[//]: # (- **Business Inquiries**: Contact our team at business@chatapp.com for collaboration or partnerships.)
-
-
-# Anonymous_Chat_Application
->>>>>>> 3e9f97de6074be914a7a939a76368a6c72c3b8b8
+## 📜 License
+This project is licensed under the MIT License.

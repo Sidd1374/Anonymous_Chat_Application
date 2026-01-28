@@ -1102,6 +1102,7 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final String currentUserName = widget.userName;
     final String currentUserImage = widget.userImage;
 
@@ -1153,10 +1154,18 @@ class _ChatAreaState extends State<ChatArea> with WidgetsBindingObserver {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage: currentUserImage.startsWith('http')
+                    backgroundImage: currentUserImage.isNotEmpty &&
+                            currentUserImage.startsWith('http')
                         ? NetworkImage(currentUserImage) as ImageProvider
-                        : AssetImage(currentUserImage),
+                        : (currentUserImage.isNotEmpty
+                            ? AssetImage(currentUserImage)
+                            : null),
                     radius: 18,
+                    child: currentUserImage.isEmpty
+                        ? Icon(Icons.person,
+                            size: 20,
+                            color: theme.colorScheme.onSurface.withOpacity(0.5))
+                        : null,
                   ),
                   const SizedBox(width: 8),
                   Expanded(

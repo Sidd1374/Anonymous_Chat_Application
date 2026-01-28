@@ -5,6 +5,7 @@ import 'package:veil_chat_application/views/settings/chat_settings.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
 import 'searching_Loader.dart';
 import '../entry/about_you.dart';
+import '../../scripts/seed_matching.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,8 +21,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _buttonScaleAnimation;
-  
+
   int _verificationLevel = 0;
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -121,7 +123,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       body: Center(
         child: Column(
@@ -137,13 +139,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
             // Animated Lottie
             FadeTransition(
-                opacity: _fadeAnimation,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 60),
-                  child: Lottie.asset('assets/animation/ani-1.json'),
-                ),
+              opacity: _fadeAnimation,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 60),
+                child: Lottie.asset('assets/animation/ani-1.json'),
               ),
-            
+            ),
+
             // Animated buttons
             ScaleTransition(
               scale: _buttonScaleAnimation,
@@ -154,14 +157,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     AppButton(
                       isPrimary: true,
                       isEnabled: true,
-                      onPressed: () => {
-                        Navigator.push(
+                      onPressed: () async {
+                        if (_isNavigating) return;
+                        setState(() => _isNavigating = true);
+
+                        await Navigator.push(
                           context,
                           PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) =>
-                                const LoaderScreen(),
-                            transitionsBuilder:
-                                (context, animation, secondaryAnimation, child) {
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    const LoaderScreen(),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
                               const begin = Offset(1.0, 0.0);
                               const end = Offset.zero;
                               const curve = Curves.easeInOutCubic;
@@ -172,9 +179,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 child: child,
                               );
                             },
-                            transitionDuration: const Duration(milliseconds: 400),
+                            transitionDuration:
+                                const Duration(milliseconds: 400),
                           ),
-                        )
+                        );
+
+                        // Reset when we come back to this page
+                        if (mounted) {
+                          setState(() => _isNavigating = false);
+                        }
                       },
                       text: "Let's Go",
                     ),
@@ -199,8 +212,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           Icon(
                             Icons.tune,
                             size: 20,
-                            color:
-                                theme.textTheme.bodyLarge?.color?.withOpacity(0.7),
+                            color: theme.textTheme.bodyLarge?.color
+                                ?.withOpacity(0.7),
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -212,6 +225,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Temporary Seed Button for Testing
+                    TextButton(
+                      onPressed: () => triggerSeed(context),
+                      child: Text(
+                        "Seed Dummy Users (Dev Only)",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.primaryColor.withOpacity(0.4),
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ],

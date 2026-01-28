@@ -49,6 +49,7 @@ dependencies:
   device_preview: ^1.2.0
   path_provider: ^2.1.5
   cloud_firestore: ^6.1.1
+  cloud_functions: ^6.0.5
   http: ^1.2.2
   cached_network_image: ^3.3.1
   google_sign_in: ^7.2.0
