@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:veil_chat_application/widgets/button.dart';
 import 'package:veil_chat_application/views/settings/chat_settings.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
+import 'package:veil_chat_application/widgets/in_app_notification.dart';
 import 'searching_Loader.dart';
 import '../entry/about_you.dart';
 import '../../scripts/seed_matching.dart';
@@ -160,6 +162,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       onPressed: () async {
                         if (_isNavigating) return;
                         setState(() => _isNavigating = true);
+
+                        // Debug: Print FCM Token
+                        final token = await FirebaseMessaging.instance.getToken();
+                        print('🔔 FCM Token: $token');
+
+                        // TEST: Show in-app notification (Remove after testing)
+                        InAppNotification.show(
+                          title: '🧪 Test Notification',
+                          body: 'Tap me to test navigation!',
+                          type: 'new_message',
+                          imageUrl: 'https://www.iamsidd.tech/media/projects/VeilChat/logo-veil.webp',
+                          onTap: () {
+                            print('✅ Notification tapped! Navigation works!');
+                            // You can test navigation here
+                          },
+                        );
 
                         await Navigator.push(
                           context,

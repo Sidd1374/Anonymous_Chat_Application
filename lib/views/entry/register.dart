@@ -14,6 +14,7 @@ import '../../services/firestore_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/services/presence_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
+import 'package:veil_chat_application/services/notification_service.dart';
 
 class Register extends StatefulWidget {
   const Register({super.key});
@@ -377,6 +378,8 @@ class _RegisterState extends State<Register> {
                                 final existingUser = app_user.User.fromJson(userDoc.data()!);
                                 await app_user.User.saveToPrefs(existingUser);
                                 await _presenceService.setOnlineStatus(existingUser.uid, true);
+                                // Initialize notifications
+                                await NotificationService().initialize(userId: existingUser.uid);
                                 if (existingUser.profilePicUrl != null && existingUser.profilePicUrl!.isNotEmpty) {
                                   ProfileImageService().loadProfileImage(existingUser.profilePicUrl!);
                                 }
@@ -414,6 +417,8 @@ class _RegisterState extends State<Register> {
                                 final prefs = await SharedPreferences.getInstance();
                                 await prefs.setString('onboarding_step', 'about');
                                 await _presenceService.setOnlineStatus(newUser.uid, true);
+                                // Initialize notifications
+                                await NotificationService().initialize(userId: newUser.uid);
 
                                 Navigator.pushReplacement(
                                   context,

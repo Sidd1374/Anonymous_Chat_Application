@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:veil_chat_application/views/entry/login.dart';
 import 'package:veil_chat_application/services/presence_service.dart';
+import 'package:veil_chat_application/services/notification_service.dart';
+import 'package:veil_chat_application/services/relationship_service.dart';
 
 class User {
   final String uid;
@@ -211,7 +213,12 @@ class User {
     final userId = prefs.getString('uid');
     if (userId != null) {
       await PresenceService().goOffline(userId);
+      // Clear FCM token from Firestore
+      await NotificationService().clearUserId();
     }
+
+    // Clear all cached user data from RelationshipService
+    await RelationshipService.clearAllUserCaches();
 
     await prefs
         .clear(); // Clears ALL data saved by your app in SharedPreferences

@@ -71,6 +71,20 @@ class MatchingService {
       final data = result.data as Map<String, dynamic>;
 
       if (data['status'] == 'matched') {
+        // Send notification to the matched user
+        try {
+          await _functions.httpsCallable('sendMatchNotification').call({
+            'targetUserId': data['matchedUserId'],
+            'matchedUserName': userName ?? 'Someone',
+            'matchedUserProfilePic': userProfilePic ?? '',
+            'chatRoomId': data['chatRoomId'],
+            'compatibilityScore': data['compatibilityScore'],
+          });
+        } catch (notifError) {
+          // Don't fail the match if notification fails
+          print('Failed to send match notification: $notifError');
+        }
+
         yield MatchResult(
           status: MatchingStatus.matched,
           chatRoomId: data['chatRoomId'],

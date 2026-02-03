@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/models/chat_room_model.dart';
 import 'package:veil_chat_application/services/chat_service.dart';
 
@@ -97,6 +99,99 @@ class RelationshipService {
   final ChatService _chatService = ChatService();
 
   CollectionReference get _usersCollection => _firestore.collection('users');
+
+  // ==================== USER DETAILS CACHE ====================
+  
+  /// In-memory cache for user details to avoid repeated Firebase reads
+  /// Cache persists until logout - no expiry time
+  static final Map<String, Map<String, dynamic>> _userDetailsCache = {};
+  
+  /// SharedPreferences cache key prefix
+  static const String _userCacheKeyPrefix = 'cached_user_details_';
+  
+  /// Get user details from cache or Firebase
+  /// User data is cached indefinitely until logout or manual refresh
+  /// This significantly reduces Firebase reads
+  Future<Map<String, dynamic>?> _getCachedUserDetails(String userId, {bool forceRefresh = false}) async {
+    // Check in-memory cache first (no expiry check - cache until logout)
+    if (!forceRefresh && _userDetailsCache.containsKey(userId)) {
+      return _userDetailsCache[userId];
+    }
+    
+    // Check SharedPreferences cache if not in memory (no expiry - cached until logout)
+    if (!forceRefresh) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final cachedJson = prefs.getString('$_userCacheKeyPrefix$userId');
+        
+        if (cachedJson != null) {
+          final data = Map<String, dynamic>.from(jsonDecode(cachedJson));
+          // Store in memory cache
+          _userDetailsCache[userId] = data;
+          return data;
+        }
+      } catch (e) {
+        print('Error reading user cache: $e');
+      }
+    }
+    
+    // Fetch from Firebase only if not cached or force refresh requested
+    try {
+      final userDoc = await _usersCollection.doc(userId).get();
+      if (!userDoc.exists) return null;
+      
+      final data = userDoc.data() as Map<String, dynamic>;
+      data['odId'] = userId;
+      
+      // Update in-memory cache
+      _userDetailsCache[userId] = data;
+      
+      // Save to SharedPreferences (async, don't wait)
+      _saveUserToPrefsCache(userId, data);
+      
+      return data;
+    } catch (e) {
+      print('Error fetching user $userId: $e');
+      return null;
+    }
+  }
+  
+  /// Save user details to SharedPreferences cache
+  Future<void> _saveUserToPrefsCache(String userId, Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Remove non-serializable fields before caching
+      final cacheableData = Map<String, dynamic>.from(data);
+      cacheableData.remove('matchedAt');
+      cacheableData.remove('expiresAt');
+      cacheableData.remove('lastMessageAt');
+      
+      await prefs.setString('$_userCacheKeyPrefix$userId', jsonEncode(cacheableData));
+    } catch (e) {
+      print('Error saving user to cache: $e');
+    }
+  }
+  
+  /// Invalidate cache for a specific user
+  void invalidateUserCache(String userId) {
+    _userDetailsCache.remove(userId);
+  }
+  
+  /// Clear all user caches (call on logout)
+  static Future<void> clearAllUserCaches() async {
+    _userDetailsCache.clear();
+    
+    // Also clear from SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().where((key) => key.startsWith(_userCacheKeyPrefix));
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } catch (e) {
+      print('Error clearing user caches: $e');
+    }
+  }
 
   // ==================== STRANGER MATCHING ====================
 
@@ -197,27 +292,21 @@ class RelationshipService {
   }
 
   /// Get friends with their details
-  Future<List<Map<String, dynamic>>> getFriendsWithDetails(String userId) async {
+  /// Uses cached user details to minimize Firebase reads
+  Future<List<Map<String, dynamic>>> getFriendsWithDetails(String userId, {bool forceRefresh = false}) async {
     final friendIds = await getFriendsList(userId);
     if (friendIds.isEmpty) return [];
 
     final friends = <Map<String, dynamic>>[];
     
-    // Fetch friend details in batches of 10 (Firestore whereIn limit)
-    for (var i = 0; i < friendIds.length; i += 10) {
-      final batch = friendIds.skip(i).take(10).toList();
-      final snapshot = await _usersCollection
-          .where(FieldPath.documentId, whereIn: batch)
-          .get();
-      
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['odId'] = doc.id;
-        
-        // Get the chat room for this friend
-        final chatRoom = await _chatService.getChatRoomBetweenUsers(userId, doc.id);
-        data['chatRoomId'] = chatRoom?.chatRoomId;
-        
+    // Use cached user details instead of fetching from Firebase every time
+    for (final friendId in friendIds) {
+      final userData = await _getCachedUserDetails(friendId, forceRefresh: forceRefresh);
+      if (userData != null) {
+        final data = Map<String, dynamic>.from(userData);
+        data['odId'] = friendId;
+        // Generate chatRoomId directly instead of querying
+        data['chatRoomId'] = ChatRoom.generateChatRoomId(userId, friendId);
         friends.add(data);
       }
     }
@@ -226,27 +315,21 @@ class RelationshipService {
   }
 
   /// Stream friends with their details for real-time updates
-  /// Optimized: generates chatRoomId without extra reads
+  /// Optimized: Uses cached user details to minimize Firebase reads
   Stream<List<Map<String, dynamic>>> streamFriendsWithDetails(String userId) {
     return streamFriendsList(userId).asyncMap((friendIds) async {
       if (friendIds.isEmpty) return [];
 
       final friends = <Map<String, dynamic>>[];
       
-      for (var i = 0; i < friendIds.length; i += 10) {
-        final batch = friendIds.skip(i).take(10).toList();
-        final snapshot = await _usersCollection
-            .where(FieldPath.documentId, whereIn: batch)
-            .get();
-        
-        for (final doc in snapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          data['odId'] = doc.id;
-          
+      // Use cached user details instead of fetching from Firebase every time
+      for (final friendId in friendIds) {
+        final userData = await _getCachedUserDetails(friendId);
+        if (userData != null) {
+          final data = Map<String, dynamic>.from(userData);
+          data['odId'] = friendId;
           // Generate chatRoomId directly instead of querying
-          // This saves 1 read per friend!
-          data['chatRoomId'] = ChatRoom.generateChatRoomId(userId, doc.id);
-          
+          data['chatRoomId'] = ChatRoom.generateChatRoomId(userId, friendId);
           friends.add(data);
         }
       }
@@ -307,7 +390,8 @@ class RelationshipService {
   // ==================== STRANGERS LIST ====================
 
   /// Get strangers list (users matched but not yet friends)
-  Future<List<Map<String, dynamic>>> getStrangersWithDetails(String userId) async {
+  /// Uses cached user details to minimize Firebase reads
+  Future<List<Map<String, dynamic>>> getStrangersWithDetails(String userId, {bool forceRefresh = false}) async {
     // Get stranger chat rooms
     final chatRooms = await _firestore.collection('chats')
         .where(Filter.or(
@@ -328,22 +412,23 @@ class RelationshipService {
 
       final strangerId = chatRoom.getOtherUserId(userId);
       
-      // Get stranger's details
-      final strangerDoc = await _usersCollection.doc(strangerId).get();
-      if (!strangerDoc.exists) continue;
+      // Use cached user details instead of always fetching from Firebase
+      final strangerData = await _getCachedUserDetails(strangerId, forceRefresh: forceRefresh);
+      if (strangerData == null) continue;
 
-      final strangerData = strangerDoc.data() as Map<String, dynamic>;
-      strangerData['odId'] = strangerId;
-      strangerData['chatRoomId'] = chatRoom.chatRoomId;
-      strangerData['hasLiked'] = chatRoom.hasCurrentUserLiked(userId);
-      strangerData['otherHasLiked'] = chatRoom.hasOtherUserLiked(userId);
-      strangerData['matchedAt'] = chatRoom.createdAt;
-      strangerData['expiresAt'] = chatRoom.expiresAt;
-      strangerData['lastMessage'] = chatRoom.lastMessage;
-      strangerData['lastMessageAt'] = chatRoom.lastMessageAt;
-      strangerData['unreadCount'] = chatRoom.getUnreadCount(userId);
+      final data = Map<String, dynamic>.from(strangerData);
+      data['odId'] = strangerId;
+      data['chatRoomId'] = chatRoom.chatRoomId;
+      data['hasLiked'] = chatRoom.hasCurrentUserLiked(userId);
+      data['otherHasLiked'] = chatRoom.hasOtherUserLiked(userId);
+      data['matchedAt'] = chatRoom.createdAt;
+      data['expiresAt'] = chatRoom.expiresAt;
+      data['lastMessage'] = chatRoom.lastMessage;
+      data['lastMessageAt'] = chatRoom.lastMessageAt;
+      data['lastMessageIsDeleted'] = chatRoom.lastMessageIsDeleted;
+      data['unreadCount'] = chatRoom.getUnreadCount(userId);
 
-      strangers.add(strangerData);
+      strangers.add(data);
     }
 
     // Sort by last message time (most recent first)
@@ -360,6 +445,7 @@ class RelationshipService {
   }
 
   /// Stream strangers with their details for real-time updates
+  /// Optimized: Uses cached user details to minimize Firebase reads
   Stream<List<Map<String, dynamic>>> streamStrangersWithDetails(String userId) {
     return _chatService.streamStrangerChatRooms(userId).asyncMap((chatRooms) async {
       final strangers = <Map<String, dynamic>>[];
@@ -370,22 +456,23 @@ class RelationshipService {
 
         final strangerId = chatRoom.getOtherUserId(userId);
         
-        // Get stranger's details
-        final strangerDoc = await _usersCollection.doc(strangerId).get();
-        if (!strangerDoc.exists) continue;
+        // Use cached user details instead of fetching from Firebase every time
+        final strangerData = await _getCachedUserDetails(strangerId);
+        if (strangerData == null) continue;
 
-        final strangerData = strangerDoc.data() as Map<String, dynamic>;
-        strangerData['odId'] = strangerId;
-        strangerData['chatRoomId'] = chatRoom.chatRoomId;
-        strangerData['hasLiked'] = chatRoom.hasCurrentUserLiked(userId);
-        strangerData['otherHasLiked'] = chatRoom.hasOtherUserLiked(userId);
-        strangerData['matchedAt'] = chatRoom.createdAt;
-        strangerData['expiresAt'] = chatRoom.expiresAt;
-        strangerData['lastMessage'] = chatRoom.lastMessage;
-        strangerData['lastMessageAt'] = chatRoom.lastMessageAt;
-        strangerData['unreadCount'] = chatRoom.getUnreadCount(userId);
+        final data = Map<String, dynamic>.from(strangerData);
+        data['odId'] = strangerId;
+        data['chatRoomId'] = chatRoom.chatRoomId;
+        data['hasLiked'] = chatRoom.hasCurrentUserLiked(userId);
+        data['otherHasLiked'] = chatRoom.hasOtherUserLiked(userId);
+        data['matchedAt'] = chatRoom.createdAt;
+        data['expiresAt'] = chatRoom.expiresAt;
+        data['lastMessage'] = chatRoom.lastMessage;
+        data['lastMessageAt'] = chatRoom.lastMessageAt;
+        data['lastMessageIsDeleted'] = chatRoom.lastMessageIsDeleted;
+        data['unreadCount'] = chatRoom.getUnreadCount(userId);
 
-        strangers.add(strangerData);
+        strangers.add(data);
       }
 
       return strangers;

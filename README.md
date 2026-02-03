@@ -1,109 +1,219 @@
-# Veil Chat 🎭
+<p align="center">
+   <img src="assets/logo/app_logo.png" alt="Veil Logo" width="80" height='80'/>
+</p>
 
-Veil Chat is a professional, high-performance messaging platform that balances the security of friendship with the excitement of anonymous discovery. It uses a cloud-powered matching engine to connect users based on deep compatibility rather than just proximity.
+<div align="center">
 
----
+# VEIL Chat
 
-## 🚀 Key Functionality
+</div>
 
-### 1. **Hyper-Personalized Global Matching**
-Our matching engine doesn't just look for "anyone online." It runs a multi-layered scoring algorithm in the cloud:
-- **Strict Filtering**: Automatically excludes any user who has one of your **Deal-Breakers** as an interest.
-- **Compatibility Scoring**: Factors in shared interests (40%), similar dislikes (10%), age proximity (20%), and physical location (15%).
-- **Verification Bonus**: Verified users get a 15% prioritization boost to ensure high-quality matches.
-- **Safety**: Matches are temporary (48-hour window) and anonymous until both users decide to become friends.
+<div align="center">
 
-### 2. **Professional Chat Experience**
-- **Real-time Engine**: Built on Firestore with zero-latency message delivery.
-- **Rich Media**: Supports image sharing powered by Cloudinary and local camera integration.
-- **Engagement Tools**: Message reactions (emoji), typing indicators, and detailed read receipts.
-- **Persistence**: "Friends" keep their chat history forever; "Strangers" have a ticking timer until the connection expires.
+### *Where Strangers Become Stories*
 
-### 3. **Privacy & Presence**
-- **Advanced Presence**: Real-time "Online" status and "Last seen" timestamps.
-- **Granular Privacy**: Toggle who sees your profile picture (Friends only vs. Everyone).
-- **Control**: Block or report users directly from the chat menu with automatic moderator flagging.
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com)
+[![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
+
+*Anonymous connections. Real conversations. Your rules.*
+
+</div>
 
 ---
 
-## 🗺️ Application Flow
+## ✨ What is Veil?
 
-```mermaid
-graph TD
-    A["User Entry (Login/Signup)"] --> B{"Current Profile?"}
-    B -- No --> C["Profile Setup (Interests/Dislikes)"]
-    B -- Yes --> D["Home Dashboard"]
-    C --> D
-    
-    D --> E["Start Global Matching"]
-    E --> F["Location & Prefs Check"]
-    F --> G["Cloud Scoring (index.js)"]
-    
-    G -- "Match Found" --> H["Anonymous Chat Room (48h)"]
-    G -- "No Match" --> I["Retry/Timeout Message"]
-    
-    H --> J{"Interaction"}
-    J -- "Likes Back" --> K["Official Friends (Permanent)"]
-    J -- "Expired" --> L["Room Deleted"]
+> **Veil** strips away the noise of modern social apps. No followers. No likes. No algorithm-driven feeds. Just **real conversations** with compatible strangers who might just become lifelong friends.
+
+```
+🎲 Match → 💬 Chat → ❤️ Connect → 🤝 Friends Forever
 ```
 
 ---
 
-## 📊 Data Model (User)
+## 🚀 Core Features
 
-The core `User` model is designed for flexibility and efficient cloud-querying.
+<table>
+<tr>
+<td width="50%">
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `uid` | String | Unique Firebase Authentication ID |
-| `fullName` | String | Display name shown to friends |
-| `interests` | List<String> | Hobbies and passions (used for matching) |
-| `chatPreferences` | Object | Includes `matchWithGender`, `ageRange`, and `onlyVerified` |
-| `dealBreakers` | List<String> | Factors that disqualify a potential match |
-| `location` | GeoPoint | Latitude/Longitude for distance calculation |
-| `verificationLevel` | Integer | 1 for Base, 2 for Identity Verified |
+### 🎯 Smart Matching Engine
+- **AI-Powered Compatibility** scoring
+- **Deal-breaker filtering** — avoid mismatches
+- **Location-aware** global connections
+- **Verification boost** for quality matches
+
+</td>
+<td width="50%">
+
+### 💬 Premium Chat Experience  
+- **Real-time** messaging with read receipts
+- **Image sharing** via Cloudinary CDN
+- **Message reactions** & typing indicators
+- **Smart caching** — zero loading lag
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### 🔒 Privacy First
+- **48-hour anonymous window** before reveal
+- **Granular controls** — who sees what
+- **Block & Report** with moderator flagging
+- **Offline mode** with data persistence
+
+</td>
+<td width="50%">
+
+### 👥 Dual Relationship System
+- **Strangers** — temporary, exciting, anonymous
+- **Friends** — permanent, trusted, full access
+- **Mutual like** = instant friendship upgrade
+- **Chat history** preserved for friends
+
+</td>
+</tr>
+</table>
 
 ---
 
-## 🛠️ Installation & Setup
+## 🧠 The Magic Behind Matching
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Sidd1374/Anonymous_Chat_Application.git
-   cd Anonymous_Chat_Application
-   ```
-
-2. **Configure Flutter**:
-   ```bash
-   flutter pub get
-   ```
-
-3. **Configure Cloud Functions**:
-   ```bash
-   cd functions
-   npm install
-   cd ..
-   ```
-
-4. **Firebase Setup**:
-   - Run `firebase login`.
-   - Run `firebase use --add` (select your project).
-   - Deploy matching logic: `firebase deploy --only functions`.
-
-5. **Run the app**:
-   ```bash
-   flutter run
-   ```
+```
+┌─────────────────────────────────────────────────────────┐
+│                  COMPATIBILITY SCORE                     │
+├─────────────────────────────────────────────────────────┤
+│  🎨 Shared Interests   ████████████████░░  40%          │
+│  📍 Location Proximity █████████░░░░░░░░░  20%          │
+│  🎂 Age Compatibility  ██████████░░░░░░░░  20%          │
+│  ✅ Verification Bonus ███████░░░░░░░░░░░  15%          │
+│  🚫 Anti-Dealbreaker   ██░░░░░░░░░░░░░░░░   5%          │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 👨‍💻 Developer Details
+## 📱 App Journey
+
+<div align="center">
+  <img src="assets/docs/app_flow.png" alt="App User Flow Diagram" width="700"/>
+</div>
+
+### 🎯 Journey Breakdown
+
+<table>
+<tr>
+<td width="33%">
+
+**🔰 Onboarding Phase**
+1. 🚀 Launch the app
+2. 🔐 Authenticate (Sign in/Register)
+3. 👤 Complete your profile
+4. 🎨 Add interests & preferences
+5. ⚙️ Set matching preferences
+
+</td>
+<td width="33%">
+
+**🎲 Matching Phase**
+1. 🏠 Access Home Dashboard
+2. 🎲 Tap "Find Match"
+3. 🔍 AI searches for compatible stranger
+4. ✨ Get matched instantly
+5. 💬 Start anonymous conversation
+
+</td>
+<td width="34%">
+
+**❤️ Connection Phase**
+1. 💭 Chat anonymously (48h window)
+2. 🖼️ Share images & reactions
+3. ❤️ Like each other mutually
+4. 🤝 Become friends (reveal identities)
+5. ♾️ Continue chatting forever!
+
+</td>
+</tr>
+</table>
+
+---
+
+## ⚡ Performance Optimizations
+
+| Feature | Impact |
+|---------|--------|
+| 🗄️ **Aggressive Caching** | User data cached until logout |
+| 📡 **Smart Streams** | Real-time updates without re-fetching |
+| 🖼️ **Image CDN** | Cloudinary for blazing-fast media |
+| 💾 **Offline Support** | SharedPreferences persistence |
+| 🔄 **Pull-to-Refresh** | On-demand data refresh only |
+
+---
+
+## 🛠️ Quick Start
+
+```bash
+# Clone & Setup
+git clone https://github.com/Sidd1374/Anonymous_Chat_Application.git
+cd Anonymous_Chat_Application
+
+# Install dependencies
+flutter pub get
+cd functions && npm install && cd ..
+
+# Configure Firebase
+firebase login && firebase use --add
+
+# Deploy cloud functions
+firebase deploy --only functions
+
+# Launch! 🚀
+flutter run
+```
+
+---
+
+## 🏗️ Tech Stack
+
+<div align="center">
+
+| Layer | Technology |
+|:-----:|:----------:|
+| **Frontend** | Flutter + Dart |
+| **Backend** | Firebase (Auth, Firestore, Functions) |
+| **Media** | Cloudinary CDN |
+| **Notifications** | FCM + Local Notifications |
+| **State** | Provider + SharedPreferences |
+
+</div>
+
+---
+
+## 👨‍💻 Developer
+
+<div align="center">
 
 **Siddharth Sharma**
-- 📧 **Email**: [sidd13704@gmail.com](mailto:sidd13704@gmail.com)
-- 🔗 **LinkedIn**: [Siddharth Sharma](https://www.linkedin.com/in/siddharthsharma1374)
-- 💻 **GitHub**: [Sidd1374](https://github.com/Sidd1374)
-- 📱 **Portfolio**: [siddharthsharma.dev](https://www.iamsidd.tech)
 
-## 📜 License
-This project is licensed under the MIT License.
+[![Email](https://img.shields.io/badge/Email-sidd13704%40gmail.com-red?style=flat-square&logo=gmail)](mailto:sidd13704@gmail.com)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Siddharth_Sharma-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/siddharthsharma1374)
+[![GitHub](https://img.shields.io/badge/GitHub-Sidd1374-black?style=flat-square&logo=github)](https://github.com/Sidd1374)
+[![Portfolio](https://img.shields.io/badge/Portfolio-iamsidd.tech-purple?style=flat-square&logo=google-chrome)](https://www.iamsidd.tech)
+
+</div>
+
+---
+
+<div align="center">
+
+### 📜 License
+
+MIT License — Build something amazing! 🚀
+
+---
+
+
+</div>
+

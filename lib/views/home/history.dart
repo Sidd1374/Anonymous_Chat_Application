@@ -201,8 +201,8 @@ class _HistoryState extends State<History> {
     });
 
     try {
-      // Fetch fresh data from Firebase
-      final strangers = await _relationshipService.getStrangersWithDetails(_currentUserId!);
+      // Fetch fresh data from Firebase (force refresh to bypass cache)
+      final strangers = await _relationshipService.getStrangersWithDetails(_currentUserId!, forceRefresh: true);
       
       if (mounted) {
         setState(() {

@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/services/profile_image_service.dart';
 import 'package:veil_chat_application/services/presence_service.dart';
+import 'package:veil_chat_application/services/notification_service.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 import '../entry/about_you.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -395,6 +396,8 @@ class _LoginState extends State<Login> {
         appUser = mymodel.User.fromJson(userDoc.data()!);
         await mymodel.User.saveToPrefs(appUser);
         await _presenceService.setOnlineStatus(appUser.uid, true);
+        // Initialize notifications
+        await NotificationService().initialize(userId: appUser.uid);
         if (appUser.profilePicUrl != null && appUser.profilePicUrl!.isNotEmpty) {
           ProfileImageService().loadProfileImage(appUser.profilePicUrl!);
         }
@@ -433,6 +436,8 @@ class _LoginState extends State<Login> {
         await prefs.setString('onboarding_step', 'about');
 
         await _presenceService.setOnlineStatus(appUser.uid, true);
+        // Initialize notifications
+        await NotificationService().initialize(userId: appUser.uid);
 
         Navigator.pushReplacement(
           context,

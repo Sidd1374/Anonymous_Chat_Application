@@ -266,8 +266,9 @@ class _FriendsPageState extends State<FriendsPage> {
     });
 
     try {
+      // Fetch fresh data from Firebase (force refresh to bypass cache)
       final friends =
-          await _relationshipService.getFriendsWithDetails(_currentUserId!);
+          await _relationshipService.getFriendsWithDetails(_currentUserId!, forceRefresh: true);
 
       if (mounted) {
         setState(() {

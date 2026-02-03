@@ -56,6 +56,10 @@ dependencies:
   super_clipboard: ^0.9.1
   geolocator: ^13.0.2
   geocoding: ^3.0.0
+  
+  # Push Notifications
+  firebase_messaging: ^16.1.0
+  flutter_local_notifications: ^18.0.1
 
 
 dev_dependencies:
@@ -106,7 +110,6 @@ flutter:
     - assets/icons/icon_verified.svg
 
     - assets/Profile_image.png
-    - assets/Profile.png
 
 
   #   - images/a_dot_burr.jpeg

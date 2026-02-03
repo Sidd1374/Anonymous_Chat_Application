@@ -92,22 +92,26 @@
 // }
 
 // // __________________without device preview____________________
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veil_chat_application/views/entry/welcome.dart';
 import 'package:veil_chat_application/views/home/container.dart';
 import 'package:veil_chat_application/services/presence_service.dart';
+import 'package:veil_chat_application/services/notification_service.dart';
 import 'package:veil_chat_application/views/entry/about_you.dart';
 import 'package:veil_chat_application/views/settings/chat_settings.dart';
+import 'package:veil_chat_application/views/chat/chat_area.dart';
 import 'package:veil_chat_application/services/firestore_service.dart';
 import 'package:veil_chat_application/models/user_model.dart' as mymodel;
+import 'package:veil_chat_application/widgets/in_app_notification.dart';
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
-// import 'models/user_model.dart';
 import 'views/entry/login.dart';
 
 void main() async {
@@ -123,6 +127,9 @@ void main() async {
     androidProvider: AndroidProvider.debug,
     appleProvider: AppleProvider.debug,
   );
+
+  // Set up background message handler for FCM
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   final prefs = await SharedPreferences.getInstance();
   final isFirstRun = prefs.getBool('isFirstRun') ?? true;
@@ -194,6 +201,12 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final PresenceService _presenceService = PresenceService();
+  final NotificationService _notificationService = NotificationService();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  
+  // Stream subscriptions to prevent memory leaks
+  StreamSubscription<RemoteMessage>? _onMessageSubscription;
+  StreamSubscription<RemoteMessage>? _onMessageOpenedAppSubscription;
 
   @override
   void initState() {
@@ -203,12 +216,155 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Set user online when app starts
     if (widget.userId != null) {
       _presenceService.setOnlineStatus(widget.userId!, true);
+      // Initialize notification service with user ID
+      _initializeNotifications(widget.userId!);
     }
+  }
+
+  /// Initialize notification service and set up listeners
+  Future<void> _initializeNotifications(String userId) async {
+    await _notificationService.initialize(userId: userId);
+
+    // Subscribe to all users topic for broadcast notifications
+    await _notificationService.subscribeToTopic('all_users');
+    
+    // Update user segments for targeted notifications
+    // Fetch user data and update segments
+    await _updateUserNotificationSegments(userId);
+
+    // Listen for notification taps to navigate
+    // Store subscription to cancel later and prevent memory leaks
+    _onMessageOpenedAppSubscription = _notificationService.onMessageOpenedApp.listen(_handleNotificationTap);
+
+    // Listen for foreground messages (optional: show in-app banner)
+    // Store subscription to cancel later and prevent memory leaks
+    _onMessageSubscription = _notificationService.onMessage.listen(_handleForegroundMessage);
+  }
+  
+  /// Update user notification segments based on their profile
+  Future<void> _updateUserNotificationSegments(String userId) async {
+    try {
+      final userDoc = await FirestoreService().getUser(userId);
+      if (userDoc.exists) {
+        final userData = userDoc.data()!;
+        await _notificationService.updateUserSegments(
+          userId: userId,
+          isPremium: userData['isPremium'] ?? false,
+          gender: userData['gender'] as String?,
+          age: userData['age'] != null ? int.tryParse(userData['age'].toString()) : null,
+          isVerified: (userData['verificationLevel'] ?? 0) > 0,
+          country: userData['country'] as String?,
+        );
+      }
+    } catch (e) {
+      print('⚠️ Error updating notification segments: $e');
+    }
+  }
+
+  /// Handle notification tap - navigate to appropriate screen
+  void _handleNotificationTap(RemoteMessage message) async {
+    final data = message.data;
+    final type = data['type'] as String?;
+    final chatRoomId = data['chatRoomId'] as String?;
+
+    switch (type) {
+      case 'new_message':
+      case 'new_match':
+      case 'mutual_like':
+        // Navigate to chat screen
+        if (chatRoomId != null) {
+          final otherUserName = data['senderName'] ?? data['matchedUserName'] ?? data['friendName'] ?? 'User';
+          final otherUserImage = data['senderProfilePic'] ?? data['matchedUserProfilePic'] ?? data['friendProfilePic'] ?? '';
+          final otherUserId = data['senderId'] ?? data['matchedUserId'] ?? data['friendId'] ?? '';
+
+          if (otherUserId.isNotEmpty) {
+            _navigatorKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (context) => ChatArea(
+                  chatId: chatRoomId,
+                  userName: otherUserName,
+                  userImage: otherUserImage,
+                  otherUserId: otherUserId,
+                ),
+              ),
+            );
+          }
+        }
+        break;
+
+      case 'promotional':
+        // Navigate to a promotional page or show a dialog
+        // Example: Navigate to premium/upgrade page
+        // _navigatorKey.currentState?.pushNamed('/premium');
+        break;
+
+      case 'chat_expiry_warning':
+        // Navigate to the expiring chat
+        if (chatRoomId != null) {
+          final otherUserName = data['partnerName'] ?? 'User';
+          final otherUserImage = data['partnerProfilePic'] ?? '';
+          final otherUserId = data['partnerId'] ?? '';
+
+          _navigatorKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => ChatArea(
+                chatId: chatRoomId,
+                userName: otherUserName,
+                userImage: otherUserImage,
+                otherUserId: otherUserId,
+              ),
+            ),
+          );
+        }
+        break;
+
+      case 'system_announcement':
+        // Just open the app (no specific navigation)
+        break;
+
+      default:
+        // Default: just open the app
+        print('🔔 Unknown notification type: $type');
+        break;
+    }
+  }
+
+  /// Handle foreground messages - show in-app notification banner
+  void _handleForegroundMessage(RemoteMessage message) {
+    print('🔔 Foreground message in MyApp: ${message.notification?.title}');
+    
+    // Extract notification data
+    final title = message.notification?.title ?? 'Veil Chat';
+    final body = message.notification?.body ?? '';
+    final data = message.data;
+    final type = data['type'] as String?;
+    
+    // Get image URL from various sources
+    final imageUrl = message.notification?.android?.imageUrl ??
+        message.notification?.apple?.imageUrl ??
+        data['imageUrl'] as String? ??
+        data['image'] as String? ??
+        data['senderProfilePic'] as String? ??
+        data['matchedUserProfilePic'] as String?;
+
+    // Show beautiful in-app notification
+    InAppNotification.show(
+      title: title,
+      body: body,
+      imageUrl: imageUrl,
+      type: type,
+      duration: const Duration(seconds: 8), 
+      onTap: () => _handleNotificationTap(message),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+
+    // Cancel stream subscriptions to prevent memory leaks
+    _onMessageSubscription?.cancel();
+    _onMessageOpenedAppSubscription?.cancel();
 
     // Set user offline when app is disposed
     if (widget.userId != null) {
@@ -257,9 +413,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 splitScreenMode: true,
                 builder: (context, child) {
                   return MaterialApp(
+                    navigatorKey: _navigatorKey,
                     debugShowCheckedModeBanner: false,
-                    title: 'ChatApp title',
+                    title: 'Veil Chat',
                     theme: appTheme.currentTheme,
+                    builder: InAppNotification.init(),
                     home: widget.isLoggedIn
                         ? (widget.onboardingStep == 'about'
                             ? EditInformation(editType: 'about')

@@ -33,6 +33,7 @@ class ChatRoom {
   final int user1UnreadCount;
   final int user2UnreadCount;
   final Timestamp? expiresAt; // For stranger chats - 48 hours from creation
+  final bool lastMessageIsDeleted; // Whether the last message was deleted
 
   ChatRoom({
     required this.chatRoomId,
@@ -53,6 +54,7 @@ class ChatRoom {
     this.user1UnreadCount = 0,
     this.user2UnreadCount = 0,
     this.expiresAt,
+    this.lastMessageIsDeleted = false,
   });
 
   /// Generate a unique chat room ID from two user IDs
@@ -133,6 +135,7 @@ class ChatRoom {
       user1UnreadCount: json['user1UnreadCount'] as int? ?? 0,
       user2UnreadCount: json['user2UnreadCount'] as int? ?? 0,
       expiresAt: json['expiresAt'] as Timestamp?,
+      lastMessageIsDeleted: json['lastMessageIsDeleted'] as bool? ?? false,
     );
   }
 
@@ -156,6 +159,7 @@ class ChatRoom {
       'user1UnreadCount': user1UnreadCount,
       'user2UnreadCount': user2UnreadCount,
       'expiresAt': expiresAt,
+      'lastMessageIsDeleted': lastMessageIsDeleted,
     };
   }
 
@@ -179,6 +183,7 @@ class ChatRoom {
     int? user1UnreadCount,
     int? user2UnreadCount,
     Timestamp? expiresAt,
+    bool? lastMessageIsDeleted,
   }) {
     return ChatRoom(
       chatRoomId: chatRoomId ?? this.chatRoomId,
@@ -199,6 +204,7 @@ class ChatRoom {
       user1UnreadCount: user1UnreadCount ?? this.user1UnreadCount,
       user2UnreadCount: user2UnreadCount ?? this.user2UnreadCount,
       expiresAt: expiresAt ?? this.expiresAt,
+      lastMessageIsDeleted: lastMessageIsDeleted ?? this.lastMessageIsDeleted,
     );
   }
 }

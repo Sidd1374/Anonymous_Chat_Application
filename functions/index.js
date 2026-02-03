@@ -400,3 +400,545 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 function deg2rad(deg) {
     return deg * (Math.PI / 180);
 }
+
+// ====================================================================================
+// NOTIFICATION FUNCTIONS
+// ====================================================================================
+
+/**
+ * Helper function to send FCM notification to a user
+ * @param {string} userId - The user ID to send notification to
+ * @param {object} notification - The notification object {title, body, imageUrl}
+ * @param {object} data - Additional data payload
+ */
+async function sendNotificationToUser(userId, notification, data = {}) {
+    try {
+        const userDoc = await db.collection("users").doc(userId).get();
+        if (!userDoc.exists) {
+            console.log(`User ${userId} not found for notification`);
+            return { success: false, reason: "user_not_found" };
+        }
+
+        const userData = userDoc.data();
+        const fcmTokens = userData.fcmTokens || [];
+
+        if (fcmTokens.length === 0) {
+            console.log(`No FCM tokens found for user ${userId}`);
+            return { success: false, reason: "no_tokens" };
+        }
+
+        // Check notification preferences
+        const notifPrefs = userData.notificationPreferences || {};
+        const type = data.type || "system_announcement";
+        
+        // Check if user has disabled this type of notification
+        if (type === "new_message" && notifPrefs.messages === false) {
+            return { success: false, reason: "disabled_by_user" };
+        }
+        if ((type === "new_match" || type === "mutual_like") && notifPrefs.matches === false) {
+            return { success: false, reason: "disabled_by_user" };
+        }
+        if (type === "promotional" && notifPrefs.promotional === false) {
+            return { success: false, reason: "disabled_by_user" };
+        }
+
+        // Prepare the message
+        const message = {
+            notification: {
+                title: notification.title,
+                body: notification.body,
+            },
+            data: {
+                ...data,
+                click_action: "FLUTTER_NOTIFICATION_CLICK",
+                // Include image URL in data payload for foreground handling
+                ...(notification.imageUrl && { imageUrl: notification.imageUrl }),
+            },
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: type === "new_message" ? "veil_messages" : 
+                               (type === "new_match" || type === "mutual_like") ? "veil_matches" : "veil_general",
+                    sound: "default",
+                    // Image for Android notification tray (MUST be HTTPS)
+                    ...(notification.imageUrl && { imageUrl: notification.imageUrl }),
+                },
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        sound: "default",
+                        badge: 1,
+                        // Image for iOS notification
+                        ...(notification.imageUrl && { "mutable-content": 1 }),
+                    },
+                },
+                // FCM options for iOS image
+                ...(notification.imageUrl && { 
+                    fcm_options: { 
+                        image: notification.imageUrl 
+                    } 
+                }),
+            },
+        };
+
+        // Add image to notification payload (for web and fallback)
+        if (notification.imageUrl) {
+            message.notification.imageUrl = notification.imageUrl;
+        }
+
+        // Send to all tokens
+        const tokensToRemove = [];
+        const sendPromises = fcmTokens.map(async (token) => {
+            try {
+                await admin.messaging().send({ ...message, token });
+                console.log(`Notification sent to token: ${token.substring(0, 20)}...`);
+                return { success: true, token };
+            } catch (error) {
+                console.error(`Error sending to token ${token.substring(0, 20)}...:`, error.code);
+                // Remove invalid tokens
+                if (error.code === "messaging/invalid-registration-token" ||
+                    error.code === "messaging/registration-token-not-registered") {
+                    tokensToRemove.push(token);
+                }
+                return { success: false, token, error: error.code };
+            }
+        });
+
+        const results = await Promise.all(sendPromises);
+
+        // Remove invalid tokens
+        if (tokensToRemove.length > 0) {
+            await db.collection("users").doc(userId).update({
+                fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
+            });
+            console.log(`Removed ${tokensToRemove.length} invalid tokens for user ${userId}`);
+        }
+
+        return { success: true, results };
+    } catch (error) {
+        console.error(`Error sending notification to user ${userId}:`, error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Trigger: Send notification when a new message is created
+ */
+exports.onNewMessage = functions.firestore
+    .document("chats/{chatRoomId}/messages/{messageId}")
+    .onCreate(async (snapshot, context) => {
+        const { chatRoomId, messageId } = context.params;
+        const messageData = snapshot.data();
+
+        // Don't send notification for system messages
+        if (messageData.senderId === "system") {
+            return null;
+        }
+
+        const senderId = messageData.senderId;
+        const receiverId = messageData.receiverId;
+
+        // Safety check: ensure we have valid sender and receiver
+        if (!senderId || !receiverId) {
+            console.log(`Missing senderId (${senderId}) or receiverId (${receiverId}) for message ${messageId}`);
+            return null;
+        }
+
+        // Get chat room to find receiver and unread count
+        const chatRoomDoc = await db.collection("chats").doc(chatRoomId).get();
+        if (!chatRoomDoc.exists) {
+            console.log(`Chat room ${chatRoomId} not found`);
+            return null;
+        }
+
+        const chatRoom = chatRoomDoc.data();
+        
+        // Safety check: ensure chat room data is valid
+        if (!chatRoom || !chatRoom.user1Id || !chatRoom.user2Id) {
+            console.log(`Invalid chat room data for ${chatRoomId}`);
+            return null;
+        }
+        
+        const isUser1Sender = chatRoom.user1Id === senderId;
+        const receiverName = isUser1Sender ? chatRoom.user2Name : chatRoom.user1Name;
+        const senderName = isUser1Sender ? chatRoom.user1Name : chatRoom.user2Name;
+        const senderProfilePic = isUser1Sender ? chatRoom.user1ProfilePic : chatRoom.user2ProfilePic;
+        const unreadCount = (isUser1Sender ? chatRoom.user2UnreadCount : chatRoom.user1UnreadCount) || 1;
+
+        // Prepare notification content
+        let messagePreview = messageData.text || "";
+        if (messageData.type === "image") {
+            messagePreview = "📷 Sent an image";
+        } else if (messageData.type === "voice") {
+            messagePreview = "🎤 Sent a voice message";
+        } else if (messagePreview.length > 50) {
+            messagePreview = messagePreview.substring(0, 47) + "...";
+        }
+
+        const notification = {
+            title: senderName || "New Message",
+            body: unreadCount > 1 
+                ? `${unreadCount} new messages: ${messagePreview}`
+                : messagePreview,
+            imageUrl: senderProfilePic || null,
+        };
+
+        const data = {
+            type: "new_message",
+            chatRoomId: chatRoomId,
+            senderId: senderId,
+            senderName: senderName || "Someone",
+            unreadCount: unreadCount.toString(),
+            messageId: messageId,
+        };
+
+        return sendNotificationToUser(receiverId, notification, data);
+    });
+
+/**
+ * Trigger: Send notification when mutual like happens (both users liked each other)
+ */
+exports.onMutualLike = functions.firestore
+    .document("chats/{chatRoomId}")
+    .onUpdate(async (change, context) => {
+        const { chatRoomId } = context.params;
+        const beforeData = change.before.data();
+        const afterData = change.after.data();
+
+        // Check if both users just liked each other (transition from stranger to friend eligible)
+        const wasMutualBefore = beforeData.user1HasLiked && beforeData.user2HasLiked;
+        const isMutualNow = afterData.user1HasLiked && afterData.user2HasLiked;
+
+        if (!wasMutualBefore && isMutualNow) {
+            console.log(`Mutual like detected in chat room ${chatRoomId}`);
+
+            // Send notification to both users
+            const user1Notification = {
+                title: "❤️ New Friend!",
+                body: `You and ${afterData.user2Name || "Someone"} are now friends!`,
+            };
+            const user2Notification = {
+                title: "❤️ New Friend!",
+                body: `You and ${afterData.user1Name || "Someone"} are now friends!`,
+            };
+
+            const data1 = {
+                type: "mutual_like",
+                chatRoomId: chatRoomId,
+                friendId: afterData.user2Id,
+                friendName: afterData.user2Name || "Someone",
+            };
+            const data2 = {
+                type: "mutual_like",
+                chatRoomId: chatRoomId,
+                friendId: afterData.user1Id,
+                friendName: afterData.user1Name || "Someone",
+            };
+
+            await Promise.all([
+                sendNotificationToUser(afterData.user1Id, user1Notification, data1),
+                sendNotificationToUser(afterData.user2Id, user2Notification, data2),
+            ]);
+        }
+
+        return null;
+    });
+
+/**
+ * Callable: Send promotional notification to all users or specific segments
+ * Only callable by admin (add your own admin check)
+ */
+exports.sendPromotionalNotification = functions.https.onCall(async (data, context) => {
+    // TODO: Add admin authentication check here
+    // if (!context.auth || !isAdmin(context.auth.uid)) {
+    //     throw new functions.https.HttpsError("permission-denied", "Only admins can send promotional notifications");
+    // }
+
+    const { title, body, imageUrl, targetTopic, targetUserIds } = data;
+
+    if (!title || !body) {
+        throw new functions.https.HttpsError("invalid-argument", "Title and body are required");
+    }
+
+    const notification = { title, body, imageUrl };
+    const payload = {
+        type: "promotional",
+        title,
+        body,
+    };
+
+    // Send to specific users
+    if (targetUserIds && Array.isArray(targetUserIds)) {
+        const results = await Promise.all(
+            targetUserIds.map(uid => sendNotificationToUser(uid, notification, payload))
+        );
+        return { success: true, sentTo: targetUserIds.length, results };
+    }
+
+    // Send to a topic (e.g., "all_users")
+    if (targetTopic) {
+        try {
+            const message = {
+                notification: { title, body },
+                data: payload,
+                topic: targetTopic,
+            };
+            if (imageUrl) message.notification.imageUrl = imageUrl;
+
+            await admin.messaging().send(message);
+            return { success: true, sentTo: targetTopic };
+        } catch (error) {
+            console.error("Error sending topic notification:", error);
+            throw new functions.https.HttpsError("internal", error.message);
+        }
+    }
+
+    throw new functions.https.HttpsError("invalid-argument", "Provide targetTopic or targetUserIds");
+});
+
+/**
+ * Scheduled: Check for expiring stranger chats and send warnings
+ * Runs every 6 hours
+ */
+exports.checkExpiringChats = functions.pubsub
+    .schedule("every 6 hours")
+    .onRun(async (context) => {
+        const now = admin.firestore.Timestamp.now();
+        const twelveHoursFromNow = admin.firestore.Timestamp.fromDate(
+            new Date(now.toDate().getTime() + 12 * 60 * 60 * 1000)
+        );
+
+        // Find stranger chats expiring within 12 hours
+        const expiringChats = await db.collection("chats")
+            .where("roomType", "==", "stranger")
+            .where("status", "==", "active")
+            .where("expiresAt", "<=", twelveHoursFromNow)
+            .where("expiresAt", ">", now)
+            .get();
+
+        console.log(`Found ${expiringChats.size} chats expiring soon`);
+
+        const notifications = [];
+
+        for (const doc of expiringChats.docs) {
+            const chat = doc.data();
+            const hoursRemaining = Math.ceil(
+                (chat.expiresAt.toDate().getTime() - now.toDate().getTime()) / (1000 * 60 * 60)
+            );
+
+            // Check if we already sent a warning (store in chat doc)
+            if (chat.expiryWarningsSent && chat.expiryWarningsSent.includes(hoursRemaining)) {
+                continue;
+            }
+
+            // Send to user1
+            notifications.push(
+                sendNotificationToUser(chat.user1Id, {
+                    title: "⏰ Chat Expiring Soon",
+                    body: `Your chat with ${chat.user2Name || "a stranger"} expires in ${hoursRemaining} hours. Like each other to become friends!`,
+                }, {
+                    type: "chat_expiring",
+                    chatRoomId: doc.id,
+                    otherUserName: chat.user2Name || "Stranger",
+                    hoursRemaining: hoursRemaining.toString(),
+                })
+            );
+
+            // Send to user2
+            notifications.push(
+                sendNotificationToUser(chat.user2Id, {
+                    title: "⏰ Chat Expiring Soon",
+                    body: `Your chat with ${chat.user1Name || "a stranger"} expires in ${hoursRemaining} hours. Like each other to become friends!`,
+                }, {
+                    type: "chat_expiring",
+                    chatRoomId: doc.id,
+                    otherUserName: chat.user1Name || "Stranger",
+                    hoursRemaining: hoursRemaining.toString(),
+                })
+            );
+
+            // Mark warning as sent
+            await doc.ref.update({
+                expiryWarningsSent: admin.firestore.FieldValue.arrayUnion(hoursRemaining),
+            });
+        }
+
+        await Promise.all(notifications);
+        console.log(`Sent ${notifications.length} expiry warning notifications`);
+
+        return null;
+    });
+
+/**
+ * Callable: Send notification when match is found
+ * This is called from the findGlobalMatch function result
+ */
+exports.sendMatchNotification = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "User must be logged in");
+    }
+
+    const { targetUserId, matchedUserName, matchedUserProfilePic, chatRoomId, compatibilityScore } = data;
+
+    if (!targetUserId || !chatRoomId) {
+        throw new functions.https.HttpsError("invalid-argument", "targetUserId and chatRoomId are required");
+    }
+
+    const notification = {
+        title: "🎭 New Match Found!",
+        body: `You've been matched with ${matchedUserName || "someone new"}! Say hello!`,
+        imageUrl: matchedUserProfilePic || null,
+    };
+
+    const payload = {
+        type: "new_match",
+        chatRoomId: chatRoomId,
+        matchedUserId: context.auth.uid,
+        matchedUserName: matchedUserName || "Someone",
+        compatibilityScore: compatibilityScore ? compatibilityScore.toString() : "0",
+    };
+
+    const result = await sendNotificationToUser(targetUserId, notification, payload);
+    return result;
+});
+
+/**
+ * Callable: Send notification to a specific topic (user segment)
+ * Only callable by admin (add your own admin check)
+ * 
+ * Topics available:
+ * - all_users: All app users
+ * - premium_users / free_users: Based on subscription
+ * - gender_male / gender_female / gender_other: Gender-based
+ * - age_18_25 / age_26_35 / age_36_50 / age_over_50: Age groups
+ * - verified_users: Verified users only
+ * - region_<country>: Country-based (e.g., region_india, region_us)
+ */
+exports.sendTopicNotification = functions.https.onCall(async (data, context) => {
+    // TODO: Add admin authentication check
+    // if (!context.auth || !isAdmin(context.auth.uid)) {
+    //     throw new functions.https.HttpsError("permission-denied", "Only admins can send topic notifications");
+    // }
+
+    const { topic, title, body, imageUrl, customData } = data;
+
+    if (!topic || !title || !body) {
+        throw new functions.https.HttpsError("invalid-argument", "topic, title, and body are required");
+    }
+
+    // Validate topic format (alphanumeric, underscores, hyphens only)
+    const validTopicRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!validTopicRegex.test(topic)) {
+        throw new functions.https.HttpsError("invalid-argument", "Invalid topic format");
+    }
+
+    try {
+        const message = {
+            notification: {
+                title: title,
+                body: body,
+            },
+            data: {
+                type: "promotional",
+                topic: topic,
+                ...(customData || {}),
+                click_action: "FLUTTER_NOTIFICATION_CLICK",
+            },
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: "veil_general",
+                    sound: "default",
+                    ...(imageUrl && { imageUrl: imageUrl }),
+                },
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        sound: "default",
+                        badge: 1,
+                    },
+                },
+                ...(imageUrl && { 
+                    fcm_options: { 
+                        image: imageUrl 
+                    } 
+                }),
+            },
+            topic: topic,  // Send to this topic
+        };
+
+        const response = await admin.messaging().send(message);
+        console.log(`Successfully sent topic notification to ${topic}:`, response);
+        
+        return { 
+            success: true, 
+            topic: topic,
+            messageId: response,
+        };
+    } catch (error) {
+        console.error(`Error sending topic notification to ${topic}:`, error);
+        throw new functions.https.HttpsError("internal", error.message);
+    }
+});
+
+/**
+ * Callable: Send notification to multiple topics at once
+ * Useful for complex targeting (e.g., premium AND verified users)
+ */
+exports.sendMultiTopicNotification = functions.https.onCall(async (data, context) => {
+    // TODO: Add admin authentication check
+
+    const { condition, title, body, imageUrl, customData } = data;
+
+    // Condition example: "'premium_users' in topics && 'verified_users' in topics"
+    // This targets users who are BOTH premium AND verified
+
+    if (!condition || !title || !body) {
+        throw new functions.https.HttpsError("invalid-argument", "condition, title, and body are required");
+    }
+
+    try {
+        const message = {
+            notification: {
+                title: title,
+                body: body,
+            },
+            data: {
+                type: "promotional",
+                ...(customData || {}),
+                click_action: "FLUTTER_NOTIFICATION_CLICK",
+            },
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: "veil_general",
+                    sound: "default",
+                    ...(imageUrl && { imageUrl: imageUrl }),
+                },
+            },
+            apns: {
+                payload: {
+                    aps: {
+                        sound: "default",
+                        badge: 1,
+                    },
+                },
+            },
+            condition: condition,  // Topic condition
+        };
+
+        const response = await admin.messaging().send(message);
+        console.log(`Successfully sent multi-topic notification:`, response);
+        
+        return { 
+            success: true, 
+            condition: condition,
+            messageId: response,
+        };
+    } catch (error) {
+        console.error(`Error sending multi-topic notification:`, error);
+        throw new functions.https.HttpsError("internal", error.message);
+    }
+});
